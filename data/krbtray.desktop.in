@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Kerberos Tray
+Comment=Kerberos ticket management tray icon
+Exec=@CMAKE_INSTALL_FULL_BINDIR@/krbtray
+Icon=security-high
+Categories=System;Security;
+StartupNotify=false

@@ -1,0 +1,37 @@
+Source: krbtray
+Section: net
+Priority: optional
+Maintainer: Edward Murrell <edward@murrell.co.nz>
+Build-Depends:
+ debhelper-compat (= 13),
+ cmake (>= 3.16),
+ pkg-config,
+ libgtk-3-dev,
+ heimdal-dev,
+ libsecret-1-dev,
+ libnotify-dev,
+Standards-Version: 4.7.0
+Homepage: https://github.com/edwardmurrell/krbtray
+Rules-Requires-Root: no
+
+Package: krbtray
+Architecture: any
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+Description: Kerberos TGT management system tray icon
+ krbtray sits in the system tray and monitors the state of all Kerberos
+ Ticket-Granting Tickets (TGTs) in the Heimdal credential cache collection.
+ .
+ Features include:
+  - Tray icon colour-coded by worst ticket state (valid/expiring/expired)
+  - Automatic TGT renewal a configurable time before expiry
+  - Desktop notification on renewal failure
+  - GTK3 dialog for obtaining new tickets (kinit)
+  - Optional password storage via the system Secret Service (libsecret)
+  - Auto-kinit on login using a stored password
+  - Multi-principal support via KCM or DIR credential cache types
+  - Preferences dialog and XDG autostart integration
+ .
+ Designed for use on Linux Mint / Cinnamon and other GTK3 desktop
+ environments that support GtkStatusIcon (XFCE, MATE, etc.).
