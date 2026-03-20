@@ -1,0 +1,34 @@
+# Build directories
+build/
+obj-*/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+Makefile
+*.cmake
+
+# Compiled binaries
+krbtray
+
+# Debian packaging artifacts
+debian/.debhelper/
+debian/krbtray/
+debian/debhelper-build-stamp
+debian/files
+debian/*.log
+debian/*.substvars
+
+# IDE / editor directories
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+\#*\#
+.#*
+
+# Generated desktop file
+data/krbtray.desktop
