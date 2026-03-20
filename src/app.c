@@ -5,6 +5,7 @@
 #include "keyring.h"
 
 #include <glib/gstdio.h>
+#include <gio/gio.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -288,11 +289,15 @@ void krbtray_app_refresh(KrbTrayApp *app)
         }
     }
 
-    /* 5. For managed entries without tickets that have a stored password:
-          attempt auto-kinit once (on startup the auto_kinit flag is TRUE). */
+    /* 5. For managed entries that need new credentials and have a stored
+          password: attempt auto-kinit.  Covers both the no-tickets case and
+          expired tickets that are no longer renewable (e.g. after a long
+          suspend where renewal is no longer possible). */
     for (GList *l = app->entries; l; l = l->next) {
         KrbPrincipalEntry *e = l->data;
-        if (!e->managed || !e->auto_kinit || e->has_tickets)
+        gboolean needs_new_creds = !e->has_tickets ||
+                                    e->state == KRB_STATE_EXPIRED;
+        if (!e->managed || !e->auto_kinit || !needs_new_creds)
             continue;
         if (!e->store_password)
             continue;
@@ -325,6 +330,62 @@ void krbtray_app_refresh(KrbTrayApp *app)
     krbtray_tray_update(app);
 }
 
+/* ── Power-resume monitoring ─────────────────────────────────────────────── */
+
+/* D-Bus signal handler for org.freedesktop.login1.Manager.PrepareForSleep.
+ * On resume (going_to_sleep == FALSE) re-arm auto-kinit for all managed
+ * principals so expired credentials are refreshed immediately. */
+static void on_prepare_for_sleep(GDBusConnection *conn,
+                                  const gchar     *sender,
+                                  const gchar     *obj_path,
+                                  const gchar     *iface,
+                                  const gchar     *signal_name,
+                                  GVariant        *params,
+                                  gpointer         data)
+{
+    (void)conn; (void)sender; (void)obj_path;
+    (void)iface; (void)signal_name;
+
+    gboolean going_to_sleep = FALSE;
+    g_variant_get(params, "(b)", &going_to_sleep);
+
+    if (!going_to_sleep) {
+        KrbTrayApp *app = data;
+        for (GList *l = app->entries; l; l = l->next) {
+            KrbPrincipalEntry *e = l->data;
+            if (e->managed && e->store_password)
+                e->auto_kinit = TRUE;
+        }
+        krbtray_app_refresh(app);
+    }
+}
+
+/* Subscribe to the systemd-logind PrepareForSleep signal so the application
+ * can re-authenticate after the system resumes from suspend or hibernation. */
+static void krbtray_app_init_sleep_monitor(KrbTrayApp *app)
+{
+    GError *err = NULL;
+    app->system_bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, &err);
+    if (!app->system_bus) {
+        g_warning("krbtray: could not connect to system D-Bus: %s",
+                  err ? err->message : "unknown error");
+        g_clear_error(&err);
+        return;
+    }
+
+    app->sleep_signal_id = g_dbus_connection_signal_subscribe(
+        app->system_bus,
+        "org.freedesktop.login1",
+        "org.freedesktop.login1.Manager",
+        "PrepareForSleep",
+        "/org/freedesktop/login1",
+        NULL,
+        G_DBUS_SIGNAL_FLAGS_NONE,
+        on_prepare_for_sleep,
+        app,
+        NULL);
+}
+
 /* ── Lifecycle ───────────────────────────────────────────────────────────── */
 
 /* Allocate and initialise the application context: Kerberos library,
@@ -353,6 +414,9 @@ KrbTrayApp *krbtray_app_new(void)
 
     /* libnotify. */
     krbtray_notify_init();
+
+    /* Power-resume monitoring. */
+    krbtray_app_init_sleep_monitor(app);
 
     /* Tray icon. */
     krbtray_tray_create(app);
@@ -383,6 +447,11 @@ void krbtray_app_free(KrbTrayApp *app)
     if (!app) return;
     if (app->timer_id > 0)
         g_source_remove(app->timer_id);
+    if (app->sleep_signal_id && app->system_bus)
+        g_dbus_connection_signal_unsubscribe(app->system_bus,
+                                             app->sleep_signal_id);
+    if (app->system_bus)
+        g_object_unref(app->system_bus);
     for (GList *l = app->entries; l; l = l->next)
         entry_free(l->data);
     g_list_free(app->entries);

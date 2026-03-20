@@ -1,6 +1,7 @@
 #include "tray.h"
 #include "kerberos.h"
 #include "kinit_dialog.h"
+#include "passwd_dialog.h"
 #include "prefs.h"
 
 #include <gtk/gtk.h>
@@ -99,6 +100,14 @@ static void on_menu_authenticate(GtkMenuItem *item, KrbTrayApp *app)
     krbtray_kinit_dialog_run(app, name);   /* name may be NULL → editable */
 }
 
+/* Menu handler: open the Change Password dialog for the selected principal. */
+static void on_menu_change_password(GtkMenuItem *item, KrbTrayApp *app)
+{
+    const gchar *name = g_object_get_data(G_OBJECT(item), PRINCIPAL_KEY);
+    if (!name) return;
+    krbtray_passwd_dialog_run(app, name, FALSE);
+}
+
 /* Menu handler: open the Preferences dialog. */
 static void on_menu_prefs(GtkMenuItem *item, KrbTrayApp *app)
 {
@@ -191,6 +200,11 @@ static GtkWidget *build_menu(KrbTrayApp *app)
             principal_item("  Authenticate…", e->principal_name,
                            G_CALLBACK(on_menu_authenticate), app);
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), auth);
+
+        GtkWidget *chpw =
+            principal_item("  Change Password…", e->principal_name,
+                           G_CALLBACK(on_menu_change_password), app);
+        gtk_menu_shell_append(GTK_MENU_SHELL(menu), chpw);
 
         gtk_menu_shell_append(GTK_MENU_SHELL(menu),
                               gtk_separator_menu_item_new());

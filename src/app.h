@@ -3,6 +3,7 @@
 #include <gtk/gtk.h>
 #include <krb5.h>
 #include <glib.h>
+#include <gio/gio.h>
 
 /* ── Ticket state ────────────────────────────────────────────────────────── */
 
@@ -53,6 +54,10 @@ typedef struct {
 
     /* Timer source id */
     guint timer_id;
+
+    /* Power-resume monitoring via logind D-Bus */
+    GDBusConnection *system_bus;
+    guint            sleep_signal_id;
 } KrbTrayApp;
 
 /* ── Lifecycle ───────────────────────────────────────────────────────────── */

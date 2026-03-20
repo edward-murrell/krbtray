@@ -234,6 +234,70 @@ krb5_error_code krbtray_krb_destroy(krb5_context ctx, const gchar *principal_nam
     return ret;
 }
 
+/* Change the Kerberos password for the named principal.  Acquires a
+ * short-lived credential for the kadmin/changepw service, then submits
+ * the new password via the RFC 3244 password-change protocol. */
+krb5_error_code krbtray_krb_change_password(krb5_context  ctx,
+                                             const gchar  *principal_name,
+                                             const gchar  *old_password,
+                                             const gchar  *new_password)
+{
+    krb5_principal           principal = NULL;
+    krb5_creds               creds;
+    krb5_get_init_creds_opt *opt       = NULL;
+    krb5_error_code          ret;
+    int                      result_code = 0;
+    krb5_data                result_code_string, result_string;
+
+    memset(&creds, 0, sizeof(creds));
+    krb5_data_zero(&result_code_string);
+    krb5_data_zero(&result_string);
+
+    ret = krb5_parse_name(ctx, principal_name, &principal);
+    if (ret) return ret;
+
+    ret = krb5_get_init_creds_opt_alloc(ctx, &opt);
+    if (ret) goto out_principal;
+
+    /* Obtain credentials specifically for the password-change service. */
+    ret = krb5_get_init_creds_password(ctx, &creds, principal,
+                                       (char *)old_password,
+                                       NULL, NULL, 0,
+                                       "kadmin/changepw",
+                                       opt);
+    if (ret) goto out_opt;
+
+    ret = krb5_change_password(ctx, &creds, (char *)new_password,
+                               &result_code,
+                               &result_code_string,
+                               &result_string);
+
+    /* A zero return but non-zero result_code means the KDC rejected the
+     * new password (e.g. quality policy).  Surface the reason string. */
+    if (ret == 0 && result_code != 0) {
+        if (result_string.length > 0) {
+            krb5_set_error_message(ctx, KRB5KDC_ERR_POLICY,
+                                   "%.*s",
+                                   (int)result_string.length,
+                                   (char *)result_string.data);
+        } else {
+            krb5_set_error_message(ctx, KRB5KDC_ERR_POLICY,
+                                   "Password change rejected by server "
+                                   "(code %d)", result_code);
+        }
+        ret = KRB5KDC_ERR_POLICY;
+    }
+
+    krb5_data_free(&result_code_string);
+    krb5_data_free(&result_string);
+    krb5_free_cred_contents(ctx, &creds);
+out_opt:
+    krb5_get_init_creds_opt_free(ctx, opt);
+out_principal:
+    krb5_free_principal(ctx, principal);
+    return ret;
+}
+
 /* Return a human-readable string for how long until the TGT expires,
  * e.g. "3h 42m", "expired", or "no tickets". Caller must g_free(). */
 gchar *krbtray_krb_time_remaining(time_t expiry)

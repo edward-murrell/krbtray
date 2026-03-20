@@ -39,6 +39,7 @@ set(SOURCES
     src/tray.c
     src/keyring.c
     src/kinit_dialog.c
+    src/passwd_dialog.c
     src/prefs.c
     src/notify.c
 )

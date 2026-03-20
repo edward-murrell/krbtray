@@ -54,5 +54,14 @@ krb5_error_code krbtray_krb_kinit  (krb5_context  ctx,
 krb5_error_code krbtray_krb_destroy (krb5_context  ctx,
                                      const gchar  *principal_name);
 
+/* Change the Kerberos password for principal_name.
+ * Authenticates with old_password, then sets new_password via the kadmin
+ * password-change protocol.  On protocol-level rejection the server's
+ * reason is surfaced through krb5_get_error_message(). */
+krb5_error_code krbtray_krb_change_password (krb5_context  ctx,
+                                              const gchar  *principal_name,
+                                              const gchar  *old_password,
+                                              const gchar  *new_password);
+
 /* Human-readable time-remaining string, e.g. "3h 42m".  Caller frees. */
 gchar *krbtray_krb_time_remaining (time_t expiry);

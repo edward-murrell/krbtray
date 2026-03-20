@@ -2,6 +2,7 @@
 #include "kerberos.h"
 #include "keyring.h"
 #include "kinit_dialog.h"
+#include "passwd_dialog.h"
 
 #include <gtk/gtk.h>
 #include <string.h>
@@ -31,6 +32,7 @@ typedef struct {
     GtkListStore  *store;
     GtkWidget     *btn_remove;
     GtkWidget     *btn_auth;
+    GtkWidget     *btn_change_pw;
     GtkWidget     *btn_clear_pw;
 } PrefsData;
 
@@ -120,6 +122,16 @@ static void on_remove_principal(GtkButton *btn, PrefsData *pd)
     g_free(name);
 }
 
+/* Toolbar handler: open the Change Password dialog for the selected principal. */
+static void on_change_password(GtkButton *btn, PrefsData *pd)
+{
+    (void)btn;
+    gchar *name = selected_principal(pd);
+    if (!name) return;
+    krbtray_passwd_dialog_run(pd->app, name, FALSE);
+    g_free(name);
+}
+
 /* Toolbar handler: open the kinit dialog for the selected principal. */
 static void on_authenticate(GtkButton *btn, PrefsData *pd)
 {
@@ -154,9 +166,10 @@ static void on_clear_password(GtkButton *btn, PrefsData *pd)
 static void on_selection_changed(GtkTreeSelection *sel, PrefsData *pd)
 {
     gboolean have_sel = gtk_tree_selection_count_selected_rows(sel) > 0;
-    gtk_widget_set_sensitive(pd->btn_remove,   have_sel);
-    gtk_widget_set_sensitive(pd->btn_auth,     have_sel);
-    gtk_widget_set_sensitive(pd->btn_clear_pw, have_sel);
+    gtk_widget_set_sensitive(pd->btn_remove,    have_sel);
+    gtk_widget_set_sensitive(pd->btn_auth,      have_sel);
+    gtk_widget_set_sensitive(pd->btn_change_pw, have_sel);
+    gtk_widget_set_sensitive(pd->btn_clear_pw,  have_sel);
 }
 
 /* Toggle callbacks for tree view check-box columns. */
@@ -351,6 +364,12 @@ static GtkWidget *build_principals_page(PrefsData *pd)
                        GTK_TOOL_ITEM(pd->btn_auth), -1);
     g_signal_connect(pd->btn_auth, "clicked",
                      G_CALLBACK(on_authenticate), pd);
+
+    pd->btn_change_pw = GTK_WIDGET(gtk_tool_button_new(NULL, "Change Password…"));
+    gtk_toolbar_insert(GTK_TOOLBAR(toolbar),
+                       GTK_TOOL_ITEM(pd->btn_change_pw), -1);
+    g_signal_connect(pd->btn_change_pw, "clicked",
+                     G_CALLBACK(on_change_password), pd);
 
     pd->btn_clear_pw = GTK_WIDGET(gtk_tool_button_new(NULL, "Clear Password"));
     gtk_toolbar_insert(GTK_TOOLBAR(toolbar),
