@@ -19,6 +19,8 @@
 
 /* ── Timer callback ──────────────────────────────────────────────────────── */
 
+/* GLib timeout callback — fires every check_interval_secs to keep ticket
+ * states up to date and trigger renewals or auto-kinit as needed. */
 static gboolean on_refresh_timer(gpointer data)
 {
     krbtray_app_refresh((KrbTrayApp *)data);
@@ -27,6 +29,8 @@ static gboolean on_refresh_timer(gpointer data)
 
 /* ── Entry helpers ───────────────────────────────────────────────────────── */
 
+/* Returns the existing entry for principal_name, or allocates and appends a
+ * new one.  Used both when scanning live caches and when loading config. */
 KrbPrincipalEntry *krbtray_app_get_or_create_entry(KrbTrayApp  *app,
                                                    const gchar *principal_name)
 {
@@ -42,12 +46,15 @@ KrbPrincipalEntry *krbtray_app_get_or_create_entry(KrbTrayApp  *app,
     return e;
 }
 
+/* Release all memory owned by an entry. */
 static void entry_free(KrbPrincipalEntry *e)
 {
     g_free(e->principal_name);
     g_free(e);
 }
 
+/* Remove a principal from the managed list and persist the change.
+ * Does nothing if the principal is not currently tracked. */
 void krbtray_app_remove_principal(KrbTrayApp *app, const gchar *principal_name)
 {
     for (GList *l = app->entries; l; l = l->next) {
@@ -63,6 +70,8 @@ void krbtray_app_remove_principal(KrbTrayApp *app, const gchar *principal_name)
 
 /* ── Config ──────────────────────────────────────────────────────────────── */
 
+/* Read the INI config file and populate app settings and managed-principal
+ * entries.  Missing file or keys are silently ignored (defaults apply). */
 void krbtray_app_load_config(KrbTrayApp *app)
 {
     GError *err = NULL;
@@ -105,6 +114,8 @@ void krbtray_app_load_config(KrbTrayApp *app)
     g_strfreev(groups);
 }
 
+/* Serialise current settings and managed-principal list to the INI config
+ * file, replacing any previously stored principal groups. */
 void krbtray_app_save_config(KrbTrayApp *app)
 {
     g_key_file_set_integer(app->config, CONFIG_GROUP_GENERAL,
@@ -142,6 +153,8 @@ void krbtray_app_save_config(KrbTrayApp *app)
 
 /* ── Autostart ───────────────────────────────────────────────────────────── */
 
+/* Create or delete the XDG autostart desktop entry so that krbtray
+ * launches (or does not launch) automatically on user login. */
 void krbtray_app_set_autostart(KrbTrayApp *app, gboolean enable)
 {
     app->autostart = enable;
@@ -187,6 +200,8 @@ void krbtray_app_set_autostart(KrbTrayApp *app, gboolean enable)
 
 /* ── Timer management ────────────────────────────────────────────────────── */
 
+/* Cancel any running periodic timer and start a fresh one using the
+ * current check_interval_secs value (call after the interval changes). */
 void krbtray_app_restart_timer(KrbTrayApp *app)
 {
     if (app->timer_id > 0) {
@@ -199,6 +214,9 @@ void krbtray_app_restart_timer(KrbTrayApp *app)
 
 /* ── Core refresh loop ───────────────────────────────────────────────────── */
 
+/* Central refresh cycle: re-reads all credential caches, attempts renewal
+ * for expiring tickets, auto-kinits managed principals where possible,
+ * then updates the tray icon to reflect the new state. */
 void krbtray_app_refresh(KrbTrayApp *app)
 {
     /* 1. Mark all entries as having no tickets so stale caches are cleared. */
@@ -309,6 +327,9 @@ void krbtray_app_refresh(KrbTrayApp *app)
 
 /* ── Lifecycle ───────────────────────────────────────────────────────────── */
 
+/* Allocate and initialise the application context: Kerberos library,
+ * config file, desktop notification support, and tray icon.
+ * Returns NULL if Kerberos cannot be initialised. */
 KrbTrayApp *krbtray_app_new(void)
 {
     KrbTrayApp *app = g_new0(KrbTrayApp, 1);
@@ -339,6 +360,8 @@ KrbTrayApp *krbtray_app_new(void)
     return app;
 }
 
+/* Kick off the application: arm auto-kinit for managed principals that have
+ * a stored password, run the first refresh, then start the periodic timer. */
 void krbtray_app_run(KrbTrayApp *app)
 {
     /* Mark all managed principals for auto-kinit on startup. */
@@ -353,6 +376,8 @@ void krbtray_app_run(KrbTrayApp *app)
     krbtray_app_restart_timer(app);
 }
 
+/* Tear down all resources: timer, principal entries, Kerberos context,
+ * config, and libnotify.  Safe to call with NULL. */
 void krbtray_app_free(KrbTrayApp *app)
 {
     if (!app) return;

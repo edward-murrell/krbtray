@@ -4,6 +4,8 @@
 
 #include "app.h"
 
+/* Entry point. Initialises locale and GTK, creates the application, then
+ * hands control to the GTK event loop until the user quits. */
 int main(int argc, char *argv[])
 {
     setlocale(LC_ALL, "");

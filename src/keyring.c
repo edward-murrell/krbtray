@@ -17,6 +17,7 @@ static const SecretSchema krbtray_schema = {
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 
+/* Build the human-readable keyring item label for a principal. */
 static gchar *label_for(const gchar *principal_name)
 {
     return g_strdup_printf("Kerberos password for %s", principal_name);
@@ -24,6 +25,8 @@ static gchar *label_for(const gchar *principal_name)
 
 /* ── Public API ──────────────────────────────────────────────────────────── */
 
+/* Persist the password for principal_name in the system Secret Service so
+ * it can be retrieved later for unattended auto-kinit. */
 gboolean krbtray_keyring_store_password(const gchar *principal_name,
                                         const gchar *password)
 {
@@ -48,6 +51,8 @@ gboolean krbtray_keyring_store_password(const gchar *principal_name,
     return ok;
 }
 
+/* Retrieve the stored password for principal_name from the Secret Service.
+ * Returns NULL if not found.  Caller must g_free() the result. */
 gchar *krbtray_keyring_lookup_password(const gchar *principal_name)
 {
     GError *err = NULL;
@@ -66,6 +71,7 @@ gchar *krbtray_keyring_lookup_password(const gchar *principal_name)
     return pw;   /* caller must g_free(); libsecret uses g_malloc */
 }
 
+/* Remove the stored password for principal_name from the Secret Service. */
 gboolean krbtray_keyring_delete_password(const gchar *principal_name)
 {
     GError  *err = NULL;

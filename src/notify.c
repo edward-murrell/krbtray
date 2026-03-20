@@ -3,16 +3,21 @@
 #include <libnotify/notify.h>
 #include <glib.h>
 
+/* Initialise the libnotify library.  Must be called before any notifications
+ * are shown. */
 void krbtray_notify_init(void)
 {
     notify_init("krbtray");
 }
 
+/* Clean up libnotify resources on application exit. */
 void krbtray_notify_uninit(void)
 {
     notify_uninit();
 }
 
+/* Send a critical desktop notification to alert the user that automatic
+ * ticket renewal failed and manual intervention is required. */
 void krbtray_notify_renewal_failed(const gchar *principal_name,
                                    const gchar *error_message)
 {

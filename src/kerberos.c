@@ -68,6 +68,8 @@ static KrbCacheInfo *cache_info_from_ccache(krb5_context ctx,
 
 /* ── Public API ──────────────────────────────────────────────────────────── */
 
+/* Walk every ccache in the collection and return a list of KrbCacheInfo
+ * for each one that contains a valid TGT. */
 GList *krbtray_krb_scan_caches(krb5_context ctx)
 {
     krb5_cccol_cursor col_cursor;
@@ -89,6 +91,8 @@ GList *krbtray_krb_scan_caches(krb5_context ctx)
     return result;
 }
 
+/* Look up the ccache for a specific principal and return its TGT info.
+ * Returns NULL if no matching cache exists. */
 KrbCacheInfo *krbtray_krb_get_cache_info(krb5_context  ctx,
                                           const gchar  *principal_name)
 {
@@ -108,6 +112,8 @@ KrbCacheInfo *krbtray_krb_get_cache_info(krb5_context  ctx,
     return info;
 }
 
+/* Classify a TGT into a display state based on how much time remains
+ * relative to the renewal threshold. */
 KrbState krbtray_krb_compute_state(time_t expiry,
                                    gint   renewal_threshold_mins)
 {
@@ -124,6 +130,8 @@ KrbState krbtray_krb_compute_state(time_t expiry,
     return KRB_STATE_VALID;
 }
 
+/* Renew the TGT for the named principal in-place, extending its lifetime
+ * without requiring the user's password. */
 krb5_error_code krbtray_krb_renew(krb5_context ctx, const gchar *principal_name)
 {
     krb5_principal  principal = NULL;
@@ -156,6 +164,8 @@ out_principal:
     return ret;
 }
 
+/* Obtain a fresh TGT for the named principal using the supplied password,
+ * requesting a 7-day renewable lifetime. */
 krb5_error_code krbtray_krb_kinit(krb5_context  ctx,
                                    const gchar  *principal_name,
                                    const gchar  *password)
@@ -204,6 +214,8 @@ out_principal:
     return ret;
 }
 
+/* Destroy the credential cache for the named principal, invalidating all
+ * its tickets immediately. */
 krb5_error_code krbtray_krb_destroy(krb5_context ctx, const gchar *principal_name)
 {
     krb5_principal  principal = NULL;
@@ -222,6 +234,8 @@ krb5_error_code krbtray_krb_destroy(krb5_context ctx, const gchar *principal_nam
     return ret;
 }
 
+/* Return a human-readable string for how long until the TGT expires,
+ * e.g. "3h 42m", "expired", or "no tickets". Caller must g_free(). */
 gchar *krbtray_krb_time_remaining(time_t expiry)
 {
     if (expiry == 0)

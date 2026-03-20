@@ -20,6 +20,8 @@ typedef struct {
 
 /* ── Callback: try to kinit ──────────────────────────────────────────────── */
 
+/* Validate the form, attempt kinit, and on success mark the principal as
+ * managed and optionally save the password to the keyring. */
 static void on_login_clicked(GtkButton *btn, KinitDialogData *d)
 {
     (void)btn;
@@ -79,6 +81,7 @@ static void on_login_clicked(GtkButton *btn, KinitDialogData *d)
 
 /* ── Callback: Enter key in password field ───────────────────────────────── */
 
+/* Allow the user to press Enter in the password field to submit. */
 static void on_password_activate(GtkEntry *entry, KinitDialogData *d)
 {
     (void)entry;
@@ -87,6 +90,9 @@ static void on_password_activate(GtkEntry *entry, KinitDialogData *d)
 
 /* ── Public ──────────────────────────────────────────────────────────────── */
 
+/* Show the Authenticate dialog.  If principal_name is non-NULL it is
+ * pre-filled and locked; otherwise the user may type any principal.
+ * Returns TRUE if authentication succeeded, FALSE on cancel or error. */
 gboolean krbtray_kinit_dialog_run(KrbTrayApp *app, const gchar *principal_name)
 {
     KinitDialogData d = { .app = app };

@@ -8,6 +8,7 @@
 
 /* ── Icon names per state ────────────────────────────────────────────────── */
 
+/* Map a ticket state to the appropriate themed icon name. */
 static const gchar *icon_for_state(KrbState state)
 {
     switch (state) {
@@ -54,6 +55,7 @@ static KrbState display_state(KrbTrayApp *app)
 
 /* ── Menu callbacks ──────────────────────────────────────────────────────── */
 
+/* Menu handler: attempt an immediate TGT renewal for the selected principal. */
 static void on_menu_renew(GtkMenuItem *item, KrbTrayApp *app)
 {
     const gchar *name = g_object_get_data(G_OBJECT(item), PRINCIPAL_KEY);
@@ -72,6 +74,7 @@ static void on_menu_renew(GtkMenuItem *item, KrbTrayApp *app)
     krbtray_app_refresh(app);
 }
 
+/* Menu handler: confirm with the user then destroy the principal's tickets. */
 static void on_menu_destroy(GtkMenuItem *item, KrbTrayApp *app)
 {
     const gchar *name = g_object_get_data(G_OBJECT(item), PRINCIPAL_KEY);
@@ -89,18 +92,21 @@ static void on_menu_destroy(GtkMenuItem *item, KrbTrayApp *app)
     }
 }
 
+/* Menu handler: open the kinit dialog for the selected principal. */
 static void on_menu_authenticate(GtkMenuItem *item, KrbTrayApp *app)
 {
     const gchar *name = g_object_get_data(G_OBJECT(item), PRINCIPAL_KEY);
     krbtray_kinit_dialog_run(app, name);   /* name may be NULL → editable */
 }
 
+/* Menu handler: open the Preferences dialog. */
 static void on_menu_prefs(GtkMenuItem *item, KrbTrayApp *app)
 {
     (void)item;
     krbtray_prefs_show(app);
 }
 
+/* Menu handler: exit the application. */
 static void on_menu_quit(GtkMenuItem *item, KrbTrayApp *app)
 {
     (void)item;
@@ -110,6 +116,8 @@ static void on_menu_quit(GtkMenuItem *item, KrbTrayApp *app)
 
 /* ── Helper: menu item that carries a principal name ─────────────────────── */
 
+/* Create a menu item that carries the principal name as object data so
+ * callback handlers can identify which principal was acted on. */
 static GtkWidget *principal_item(const gchar *label, const gchar *principal,
                                  GCallback cb, KrbTrayApp *app)
 {
@@ -123,6 +131,8 @@ static GtkWidget *principal_item(const gchar *label, const gchar *principal,
 
 /* ── Build the context menu ──────────────────────────────────────────────── */
 
+/* Build the right-click context menu from the current principal list.
+ * Each principal gets its own section with relevant ticket actions. */
 static GtkWidget *build_menu(KrbTrayApp *app)
 {
     GtkWidget *menu = gtk_menu_new();
@@ -213,6 +223,7 @@ static GtkWidget *build_menu(KrbTrayApp *app)
 
 /* ── GtkStatusIcon signal handlers ───────────────────────────────────────── */
 
+/* Right-click handler: rebuild and display the context menu at the tray icon. */
 static void on_tray_popup_menu(GtkStatusIcon *icon, guint button,
                                guint activate_time, KrbTrayApp *app)
 {
@@ -237,6 +248,7 @@ static void on_tray_activate(GtkStatusIcon *icon, KrbTrayApp *app)
 
 /* ── Public API ──────────────────────────────────────────────────────────── */
 
+/* Create the GtkStatusIcon and connect click/popup-menu signals. */
 void krbtray_tray_create(KrbTrayApp *app)
 {
     app->tray_icon = gtk_status_icon_new_from_icon_name("security-low");
@@ -249,6 +261,8 @@ void krbtray_tray_create(KrbTrayApp *app)
                      G_CALLBACK(on_tray_popup_menu), app);
 }
 
+/* Refresh the tray icon image and tooltip to reflect the current worst-case
+ * ticket state across all principals. */
 void krbtray_tray_update(KrbTrayApp *app)
 {
     KrbState ds = display_state(app);

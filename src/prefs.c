@@ -36,6 +36,7 @@ typedef struct {
 
 /* ── Principals list helpers ─────────────────────────────────────────────── */
 
+/* Convert a KrbState value to the display string shown in the principals list. */
 static const gchar *state_string(KrbState state)
 {
     switch (state) {
@@ -46,6 +47,8 @@ static const gchar *state_string(KrbState state)
     }
 }
 
+/* Reload the principals list store from the current app entry list,
+ * showing only managed principals. */
 static void populate_store(PrefsData *pd)
 {
     gtk_list_store_clear(pd->store);
@@ -83,6 +86,7 @@ static gchar *selected_principal(PrefsData *pd)
 
 /* ── Principals toolbar callbacks ────────────────────────────────────────── */
 
+/* Toolbar handler: open the kinit dialog to add a new managed principal. */
 static void on_add_principal(GtkButton *btn, PrefsData *pd)
 {
     (void)btn;
@@ -92,6 +96,7 @@ static void on_add_principal(GtkButton *btn, PrefsData *pd)
         populate_store(pd);
 }
 
+/* Toolbar handler: confirm and remove the selected principal from management. */
 static void on_remove_principal(GtkButton *btn, PrefsData *pd)
 {
     (void)btn;
@@ -115,6 +120,7 @@ static void on_remove_principal(GtkButton *btn, PrefsData *pd)
     g_free(name);
 }
 
+/* Toolbar handler: open the kinit dialog for the selected principal. */
 static void on_authenticate(GtkButton *btn, PrefsData *pd)
 {
     (void)btn;
@@ -125,6 +131,8 @@ static void on_authenticate(GtkButton *btn, PrefsData *pd)
     g_free(name);
 }
 
+/* Toolbar handler: delete the stored keyring password and disable auto-kinit
+ * for the selected principal. */
 static void on_clear_password(GtkButton *btn, PrefsData *pd)
 {
     (void)btn;
@@ -141,6 +149,8 @@ static void on_clear_password(GtkButton *btn, PrefsData *pd)
     g_free(name);
 }
 
+/* Enable or disable the toolbar action buttons depending on whether a
+ * principal is currently selected in the list. */
 static void on_selection_changed(GtkTreeSelection *sel, PrefsData *pd)
 {
     gboolean have_sel = gtk_tree_selection_count_selected_rows(sel) > 0;
@@ -150,6 +160,8 @@ static void on_selection_changed(GtkTreeSelection *sel, PrefsData *pd)
 }
 
 /* Toggle callbacks for tree view check-box columns. */
+/* Inline toggle handler: flip the "store password" flag; also clears the
+ * keyring entry and disables auto-kinit when the flag is turned off. */
 static void on_store_pw_toggled(GtkCellRendererToggle *cell,
                                 gchar                 *path_str,
                                 PrefsData             *pd)
@@ -179,6 +191,7 @@ static void on_store_pw_toggled(GtkCellRendererToggle *cell,
     g_free(name);
 }
 
+/* Inline toggle handler: flip the "auto kinit" flag for the selected row. */
 static void on_auto_kinit_toggled(GtkCellRendererToggle *cell,
                                   gchar                 *path_str,
                                   PrefsData             *pd)
@@ -204,6 +217,8 @@ static void on_auto_kinit_toggled(GtkCellRendererToggle *cell,
 
 /* ── Build individual notebook pages ─────────────────────────────────────── */
 
+/* Construct the General tab with renewal threshold, check interval, and
+ * autostart controls. */
 static GtkWidget *build_general_page(PrefsData *pd)
 {
     GtkWidget *grid = gtk_grid_new();
@@ -259,6 +274,8 @@ static GtkWidget *build_general_page(PrefsData *pd)
     return grid;
 }
 
+/* Construct the Principals tab with a list view of managed principals and
+ * a toolbar for add, remove, authenticate, and clear-password actions. */
 static GtkWidget *build_principals_page(PrefsData *pd)
 {
     GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
@@ -354,6 +371,8 @@ static GtkWidget *build_principals_page(PrefsData *pd)
 
 /* ── Public entry point ──────────────────────────────────────────────────── */
 
+/* Show the modal Preferences dialog and, if the user clicks Apply, persist
+ * and activate all changed settings. */
 void krbtray_prefs_show(KrbTrayApp *app)
 {
     PrefsData pd = { .app = app };
