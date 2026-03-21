@@ -133,13 +133,14 @@ static void on_change_password(GtkButton *btn, PrefsData *pd)
     g_free(name);
 }
 
-/* Toolbar handler: open the kinit dialog for the selected principal. */
+/* Toolbar handler: authenticate the selected principal, using a stored
+ * password silently where available, otherwise prompting with the dialog. */
 static void on_authenticate(GtkButton *btn, PrefsData *pd)
 {
     (void)btn;
     gchar *name = selected_principal(pd);
     if (!name) return;
-    if (krbtray_kinit_dialog_run(pd->app, name))
+    if (krbtray_app_authenticate(pd->app, name))
         populate_store(pd);
     g_free(name);
 }

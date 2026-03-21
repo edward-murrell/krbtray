@@ -3,6 +3,7 @@
 #include "tray.h"
 #include "notify.h"
 #include "keyring.h"
+#include "kinit_dialog.h"
 #include "passwd_dialog.h"
 
 #include <glib/gstdio.h>
@@ -338,6 +339,36 @@ void krbtray_app_refresh(KrbTrayApp *app)
 
     /* 6. Update the tray icon and menu. */
     krbtray_tray_update(app);
+}
+
+/* ── Authentication helper ───────────────────────────────────────────────── */
+
+/* Authenticate a principal, using the stored keyring password silently where
+ * possible.  Falls back to the interactive dialog if no password is stored or
+ * if the silent attempt fails (e.g. wrong password, expired password). */
+gboolean krbtray_app_authenticate(KrbTrayApp *app, const gchar *principal_name)
+{
+    if (principal_name) {
+        KrbPrincipalEntry *e =
+            krbtray_app_get_or_create_entry(app, principal_name);
+        if (e->store_password) {
+            gchar *pw = krbtray_keyring_lookup_password(principal_name);
+            if (pw) {
+                krb5_error_code ret =
+                    krbtray_krb_kinit(app->krb_ctx, principal_name, pw);
+                g_free(pw);
+                if (ret == 0) {
+                    krbtray_app_refresh(app);
+                    return TRUE;
+                }
+                if (ret == KRB5KDC_ERR_KEY_EXPIRED)
+                    return krbtray_passwd_dialog_run(app, principal_name, TRUE);
+                /* Other failures: let the user correct credentials
+                 * via the interactive dialog. */
+            }
+        }
+    }
+    return krbtray_kinit_dialog_run(app, principal_name);
 }
 
 /* ── Power-resume monitoring ─────────────────────────────────────────────── */

@@ -94,11 +94,12 @@ static void on_menu_destroy(GtkMenuItem *item, KrbTrayApp *app)
     }
 }
 
-/* Menu handler: open the kinit dialog for the selected principal. */
+/* Menu handler: authenticate the selected principal, using a stored password
+ * silently where available, otherwise prompting with the kinit dialog. */
 static void on_menu_authenticate(GtkMenuItem *item, KrbTrayApp *app)
 {
     const gchar *name = g_object_get_data(G_OBJECT(item), PRINCIPAL_KEY);
-    krbtray_kinit_dialog_run(app, name);   /* name may be NULL → editable */
+    krbtray_app_authenticate(app, name);   /* name may be NULL → editable */
 }
 
 /* Menu handler: open the Change Password dialog for the selected principal. */

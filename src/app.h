@@ -85,3 +85,8 @@ KrbPrincipalEntry *krbtray_app_get_or_create_entry (KrbTrayApp  *app,
 
 /* Remove a managed principal and destroy its entry. */
 void krbtray_app_remove_principal (KrbTrayApp *app, const gchar *principal_name);
+
+/* Authenticate principal_name, using any stored keyring password silently.
+ * Falls back to the interactive kinit dialog on failure or if no password is
+ * stored.  Pass NULL for principal_name to open an editable dialog. */
+gboolean krbtray_app_authenticate (KrbTrayApp *app, const gchar *principal_name);
