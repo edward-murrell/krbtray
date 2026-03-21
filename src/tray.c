@@ -5,6 +5,7 @@
 #include "prefs.h"
 
 #include <gtk/gtk.h>
+#include <glib/gi18n.h>
 #include <string.h>
 
 /* ── Icon names per state ────────────────────────────────────────────────── */
@@ -67,7 +68,7 @@ static void on_menu_renew(GtkMenuItem *item, KrbTrayApp *app)
         const char *msg = krb5_get_error_message(app->krb_ctx, ret);
         GtkWidget *dlg = gtk_message_dialog_new(
             NULL, 0, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
-            "Renewal failed for %s:\n%s", name, msg);
+            _("Renewal failed for %s:\n%s"), name, msg);
         gtk_dialog_run(GTK_DIALOG(dlg));
         gtk_widget_destroy(dlg);
         krb5_free_error_message(app->krb_ctx, msg);
@@ -83,7 +84,7 @@ static void on_menu_destroy(GtkMenuItem *item, KrbTrayApp *app)
 
     GtkWidget *dlg = gtk_message_dialog_new(
         NULL, 0, GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
-        "Destroy Kerberos tickets for %s?", name);
+        _("Destroy Kerberos tickets for %s?"), name);
     gint r = gtk_dialog_run(GTK_DIALOG(dlg));
     gtk_widget_destroy(dlg);
 
@@ -147,13 +148,13 @@ static GtkWidget *build_menu(KrbTrayApp *app)
     GtkWidget *menu = gtk_menu_new();
 
     /* Title (insensitive). */
-    GtkWidget *title = gtk_menu_item_new_with_label("Kerberos Tray Monitor");
+    GtkWidget *title = gtk_menu_item_new_with_label(_("Kerberos Tray Monitor"));
     gtk_widget_set_sensitive(title, FALSE);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), title);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
 
     if (app->entries == NULL) {
-        GtkWidget *none = gtk_menu_item_new_with_label("No tickets");
+        GtkWidget *none = gtk_menu_item_new_with_label(_("No tickets"));
         gtk_widget_set_sensitive(none, FALSE);
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), none);
         gtk_menu_shell_append(GTK_MENU_SHELL(menu),
@@ -168,7 +169,7 @@ static GtkWidget *build_menu(KrbTrayApp *app)
         gchar *time_str = krbtray_krb_time_remaining(e->expiry);
         gchar *header   = e->has_tickets
             ? g_strdup_printf("%s  (%s)", e->principal_name, time_str)
-            : g_strdup_printf("%s  (no tickets)", e->principal_name);
+            : g_strdup_printf("%s  (%s)", e->principal_name, _("no tickets"));
         g_free(time_str);
 
         GtkWidget *hdr_item = gtk_menu_item_new();
@@ -186,23 +187,23 @@ static GtkWidget *build_menu(KrbTrayApp *app)
         if (e->has_tickets) {
             if (e->renewable) {
                 GtkWidget *renew =
-                    principal_item("  Renew Now", e->principal_name,
+                    principal_item(_("  Renew Now"), e->principal_name,
                                    G_CALLBACK(on_menu_renew), app);
                 gtk_menu_shell_append(GTK_MENU_SHELL(menu), renew);
             }
             GtkWidget *destroy =
-                principal_item("  Destroy Tickets", e->principal_name,
+                principal_item(_("  Destroy Tickets"), e->principal_name,
                                G_CALLBACK(on_menu_destroy), app);
             gtk_menu_shell_append(GTK_MENU_SHELL(menu), destroy);
         }
 
         GtkWidget *auth =
-            principal_item("  Authenticate…", e->principal_name,
+            principal_item(_("  Authenticate…"), e->principal_name,
                            G_CALLBACK(on_menu_authenticate), app);
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), auth);
 
         GtkWidget *chpw =
-            principal_item("  Change Password…", e->principal_name,
+            principal_item(_("  Change Password…"), e->principal_name,
                            G_CALLBACK(on_menu_change_password), app);
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), chpw);
 
@@ -212,14 +213,14 @@ static GtkWidget *build_menu(KrbTrayApp *app)
 
     /* Add principal (opens kinit dialog with empty principal). */
     GtkWidget *add_item =
-        principal_item("Add Principal…", NULL,
+        principal_item(_("Add Principal…"), NULL,
                        G_CALLBACK(on_menu_authenticate), app);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), add_item);
 
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
 
     /* Preferences. */
-    GtkWidget *prefs_item = gtk_menu_item_new_with_mnemonic("_Preferences…");
+    GtkWidget *prefs_item = gtk_menu_item_new_with_mnemonic(_("_Preferences…"));
     g_signal_connect(prefs_item, "activate",
                      G_CALLBACK(on_menu_prefs), app);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), prefs_item);
@@ -227,7 +228,7 @@ static GtkWidget *build_menu(KrbTrayApp *app)
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
 
     /* Quit. */
-    GtkWidget *quit_item = gtk_menu_item_new_with_mnemonic("_Quit");
+    GtkWidget *quit_item = gtk_menu_item_new_with_mnemonic(_("_Quit"));
     g_signal_connect(quit_item, "activate", G_CALLBACK(on_menu_quit), app);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), quit_item);
 
@@ -266,7 +267,7 @@ static void on_tray_activate(GtkStatusIcon *icon, KrbTrayApp *app)
 void krbtray_tray_create(KrbTrayApp *app)
 {
     app->tray_icon = gtk_status_icon_new_from_icon_name("security-low");
-    gtk_status_icon_set_title(app->tray_icon, "Kerberos Tray");
+    gtk_status_icon_set_title(app->tray_icon, _("Kerberos Tray"));
     gtk_status_icon_set_visible(app->tray_icon, TRUE);
 
     g_signal_connect(app->tray_icon, "activate",
@@ -285,10 +286,10 @@ void krbtray_tray_update(KrbTrayApp *app)
                                        icon_for_state(ds));
 
     /* Build a tooltip listing all principals. */
-    GString *tip = g_string_new("Kerberos tickets:\n");
+    GString *tip = g_string_new(_("Kerberos tickets:\n"));
 
     if (app->entries == NULL) {
-        g_string_append(tip, "  (none)");
+        g_string_append(tip, _("  (none)"));
     } else {
         for (GList *l = app->entries; l; l = l->next) {
             KrbPrincipalEntry *e = l->data;

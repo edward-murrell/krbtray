@@ -1,0 +1,261 @@
+# krbtray – Kerberos tray icon
+# Copyright (C) 2022 WisTex TechSero Ltd. Co.
+# This file is distributed under the same licence as the krbtray package.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: krbtray 1.0.0\n"
+"Report-Msgid-Bugs-To: https://github.com/edward-murrell/krbtray/issues\n"
+"POT-Creation-Date: 2026-03-21 00:00+0000\n"
+"PO-Revision-Date: 2026-03-21 00:00+0000\n"
+"Last-Translator: Edward Murrell <edward@murrell.co.nz>\n"
+"Language-Team: https://github.com/edward-murrell/krbtray\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: src/kerberos.c
+msgid "no tickets"
+msgstr ""
+
+#: src/kerberos.c
+msgid "expired"
+msgstr ""
+
+#: src/tray.c
+msgid "Kerberos Tray"
+msgstr ""
+
+#: src/tray.c
+msgid "Kerberos Tray Monitor"
+msgstr ""
+
+#: src/tray.c
+msgid "No tickets"
+msgstr ""
+
+#: src/tray.c
+msgid "  Renew Now"
+msgstr ""
+
+#: src/tray.c
+msgid "  Destroy Tickets"
+msgstr ""
+
+#: src/tray.c
+msgid "  Authenticate…"
+msgstr ""
+
+#: src/tray.c
+msgid "  Change Password…"
+msgstr ""
+
+#: src/tray.c
+msgid "Add Principal…"
+msgstr ""
+
+#: src/tray.c
+msgid "_Preferences…"
+msgstr ""
+
+#: src/tray.c
+msgid "_Quit"
+msgstr ""
+
+#: src/tray.c
+#, c-format
+msgid "Renewal failed for %s:\n%s"
+msgstr ""
+
+#: src/tray.c
+#, c-format
+msgid "Destroy Kerberos tickets for %s?"
+msgstr ""
+
+#: src/tray.c
+msgid "Kerberos tickets:\n"
+msgstr ""
+
+#: src/tray.c
+msgid "  (none)"
+msgstr ""
+
+#: src/kinit_dialog.c
+msgid "Authenticate with Kerberos"
+msgstr ""
+
+#: src/kinit_dialog.c src/passwd_dialog.c
+msgid "_Cancel"
+msgstr ""
+
+#: src/kinit_dialog.c
+msgid "_Authenticate"
+msgstr ""
+
+#: src/kinit_dialog.c
+msgid "_Principal:"
+msgstr ""
+
+#: src/kinit_dialog.c
+msgid "Pass_word:"
+msgstr ""
+
+#: src/kinit_dialog.c
+msgid "_Remember password in keyring"
+msgstr ""
+
+#: src/kinit_dialog.c
+msgid "Please enter a principal."
+msgstr ""
+
+#: src/kinit_dialog.c
+msgid "Authenticating…"
+msgstr ""
+
+#: src/passwd_dialog.c
+msgid "Change Kerberos Password"
+msgstr ""
+
+#: src/passwd_dialog.c
+msgid "_Change Password"
+msgstr ""
+
+#: src/passwd_dialog.c
+msgid "Your password must be changed before you can log in."
+msgstr ""
+
+#: src/passwd_dialog.c
+msgid "Principal:"
+msgstr ""
+
+#: src/passwd_dialog.c
+msgid "_Current password:"
+msgstr ""
+
+#: src/passwd_dialog.c
+msgid "_New password:"
+msgstr ""
+
+#: src/passwd_dialog.c
+msgid "C_onfirm password:"
+msgstr ""
+
+#: src/passwd_dialog.c
+msgid "Please enter your current password."
+msgstr ""
+
+#: src/passwd_dialog.c
+msgid "Please enter a new password."
+msgstr ""
+
+#: src/passwd_dialog.c
+msgid "New passwords do not match."
+msgstr ""
+
+#: src/passwd_dialog.c
+msgid "Changing password…"
+msgstr ""
+
+#: src/passwd_dialog.c
+msgid "Current password is incorrect."
+msgstr ""
+
+#: src/prefs.c
+msgid "Valid"
+msgstr ""
+
+#: src/prefs.c
+msgid "Expiring"
+msgstr ""
+
+#: src/prefs.c
+msgid "Expired"
+msgstr ""
+
+#: src/prefs.c
+msgid "Preferences"
+msgstr ""
+
+#: src/prefs.c
+msgid "_Apply"
+msgstr ""
+
+#: src/prefs.c
+msgid "Renew TGT"
+msgstr ""
+
+#: src/prefs.c
+msgid "minutes before expiry"
+msgstr ""
+
+#: src/prefs.c
+msgid "Check ticket status every"
+msgstr ""
+
+#: src/prefs.c
+msgid "seconds"
+msgstr ""
+
+#: src/prefs.c
+msgid "_Start automatically on login"
+msgstr ""
+
+#: src/prefs.c
+msgid "General"
+msgstr ""
+
+#: src/prefs.c
+msgid "Principals"
+msgstr ""
+
+#: src/prefs.c
+msgid "Principal"
+msgstr ""
+
+#: src/prefs.c
+msgid "State"
+msgstr ""
+
+#: src/prefs.c
+msgid "Store password"
+msgstr ""
+
+#: src/prefs.c
+msgid "Auto kinit"
+msgstr ""
+
+#: src/prefs.c
+msgid "Remove"
+msgstr ""
+
+#: src/prefs.c
+msgid "Authenticate…"
+msgstr ""
+
+#: src/prefs.c
+msgid "Change Password…"
+msgstr ""
+
+#: src/prefs.c
+msgid "Clear Password"
+msgstr ""
+
+#: src/prefs.c
+#, c-format
+msgid "Remove principal \"%s\" from the managed list?"
+msgstr ""
+
+#: src/notify.c
+msgid "Kerberos Renewal Failed"
+msgstr ""
+
+#: src/notify.c
+#, c-format
+msgid "Could not renew Kerberos tickets for <b>%s</b>.\n%s"
+msgstr ""
+
+#: src/notify.c
+msgid "Unknown error."
+msgstr ""

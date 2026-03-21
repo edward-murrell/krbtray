@@ -2,6 +2,7 @@
 
 #include <string.h>
 #include <time.h>
+#include <glib/gi18n.h>
 
 /* ── Internal helpers ────────────────────────────────────────────────────── */
 
@@ -303,13 +304,13 @@ out_principal:
 gchar *krbtray_krb_time_remaining(time_t expiry)
 {
     if (expiry == 0)
-        return g_strdup("no tickets");
+        return g_strdup(_("no tickets"));
 
     time_t now  = time(NULL);
     time_t diff = expiry - now;
 
     if (diff <= 0)
-        return g_strdup("expired");
+        return g_strdup(_("expired"));
 
     gint hours = (gint)(diff / 3600);
     gint mins  = (gint)((diff % 3600) / 60);

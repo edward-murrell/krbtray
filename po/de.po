@@ -1,0 +1,197 @@
+# krbtray – German translation
+# Copyright (C) 2022 WisTex TechSero Ltd. Co.
+# This file is distributed under the same licence as the krbtray package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: krbtray 1.0.0\n"
+"Report-Msgid-Bugs-To: https://github.com/edward-murrell/krbtray/issues\n"
+"POT-Creation-Date: 2026-03-21 00:00+0000\n"
+"PO-Revision-Date: 2026-03-21 00:00+0000\n"
+"Last-Translator: Edward Murrell <edward@murrell.co.nz>\n"
+"Language-Team: https://github.com/edward-murrell/krbtray\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "no tickets"
+msgstr "keine Tickets"
+
+msgid "expired"
+msgstr "abgelaufen"
+
+msgid "Kerberos Tray"
+msgstr "Kerberos-Infobereich"
+
+msgid "Kerberos Tray Monitor"
+msgstr "Kerberos-Infobereich"
+
+msgid "No tickets"
+msgstr "Keine Tickets"
+
+msgid "  Renew Now"
+msgstr "  Jetzt erneuern"
+
+msgid "  Destroy Tickets"
+msgstr "  Tickets vernichten"
+
+msgid "  Authenticate…"
+msgstr "  Authentifizieren…"
+
+msgid "  Change Password…"
+msgstr "  Kennwort ändern…"
+
+msgid "Add Principal…"
+msgstr "Principal hinzufügen…"
+
+msgid "_Preferences…"
+msgstr "_Einstellungen…"
+
+msgid "_Quit"
+msgstr "_Beenden"
+
+msgid "Renewal failed for %s:\n%s"
+msgstr "Erneuerung fehlgeschlagen für %s:\n%s"
+
+msgid "Destroy Kerberos tickets for %s?"
+msgstr "Kerberos-Tickets für %s vernichten?"
+
+msgid "Kerberos tickets:\n"
+msgstr "Kerberos-Tickets:\n"
+
+msgid "  (none)"
+msgstr "  (keine)"
+
+msgid "Authenticate with Kerberos"
+msgstr "Mit Kerberos authentifizieren"
+
+msgid "_Cancel"
+msgstr "_Abbrechen"
+
+msgid "_Authenticate"
+msgstr "_Authentifizieren"
+
+msgid "_Principal:"
+msgstr "_Principal:"
+
+msgid "Pass_word:"
+msgstr "_Kennwort:"
+
+msgid "_Remember password in keyring"
+msgstr "Kennwort im _Schlüsselbund speichern"
+
+msgid "Please enter a principal."
+msgstr "Bitte geben Sie einen Principal ein."
+
+msgid "Authenticating…"
+msgstr "Authentifizierung läuft…"
+
+msgid "Change Kerberos Password"
+msgstr "Kerberos-Kennwort ändern"
+
+msgid "_Change Password"
+msgstr "Kennwort _ändern"
+
+msgid "Your password must be changed before you can log in."
+msgstr "Ihr Kennwort muss geändert werden, bevor Sie sich anmelden können."
+
+msgid "Principal:"
+msgstr "Principal:"
+
+msgid "_Current password:"
+msgstr "_Aktuelles Kennwort:"
+
+msgid "_New password:"
+msgstr "_Neues Kennwort:"
+
+msgid "C_onfirm password:"
+msgstr "Kennwort _bestätigen:"
+
+msgid "Please enter your current password."
+msgstr "Bitte geben Sie Ihr aktuelles Kennwort ein."
+
+msgid "Please enter a new password."
+msgstr "Bitte geben Sie ein neues Kennwort ein."
+
+msgid "New passwords do not match."
+msgstr "Die neuen Kennwörter stimmen nicht überein."
+
+msgid "Changing password…"
+msgstr "Kennwort wird geändert…"
+
+msgid "Current password is incorrect."
+msgstr "Das aktuelle Kennwort ist falsch."
+
+msgid "Valid"
+msgstr "Gültig"
+
+msgid "Expiring"
+msgstr "Läuft ab"
+
+msgid "Expired"
+msgstr "Abgelaufen"
+
+msgid "Preferences"
+msgstr "Einstellungen"
+
+msgid "_Apply"
+msgstr "_Anwenden"
+
+msgid "Renew TGT"
+msgstr "TGT erneuern"
+
+msgid "minutes before expiry"
+msgstr "Minuten vor Ablauf"
+
+msgid "Check ticket status every"
+msgstr "Ticket-Status alle"
+
+msgid "seconds"
+msgstr "Sekunden prüfen"
+
+msgid "_Start automatically on login"
+msgstr "_Automatisch bei Anmeldung starten"
+
+msgid "General"
+msgstr "Allgemein"
+
+msgid "Principals"
+msgstr "Prinzipale"
+
+msgid "Principal"
+msgstr "Principal"
+
+msgid "State"
+msgstr "Status"
+
+msgid "Store password"
+msgstr "Kennwort speichern"
+
+msgid "Auto kinit"
+msgstr "Automatisches kinit"
+
+msgid "Remove"
+msgstr "Entfernen"
+
+msgid "Authenticate…"
+msgstr "Authentifizieren…"
+
+msgid "Change Password…"
+msgstr "Kennwort ändern…"
+
+msgid "Clear Password"
+msgstr "Kennwort löschen"
+
+msgid "Remove principal \"%s\" from the managed list?"
+msgstr "Principal \"%s\" aus der verwalteten Liste entfernen?"
+
+msgid "Kerberos Renewal Failed"
+msgstr "Kerberos-Erneuerung fehlgeschlagen"
+
+msgid "Could not renew Kerberos tickets for <b>%s</b>.\n%s"
+msgstr "Kerberos-Tickets für <b>%s</b> konnten nicht erneuert werden.\n%s"
+
+msgid "Unknown error."
+msgstr "Unbekannter Fehler."

@@ -3,6 +3,7 @@
 #include "keyring.h"
 
 #include <gtk/gtk.h>
+#include <glib/gi18n.h>
 #include <string.h>
 
 /* ── Dialog state ────────────────────────────────────────────────────────── */
@@ -36,27 +37,27 @@ static void on_change_clicked(GtkButton *btn, PasswdDialogData *d)
 
     if (!current_pw || *current_pw == '\0') {
         gtk_label_set_text(GTK_LABEL(d->label_error),
-                           "Please enter your current password.");
+                           _("Please enter your current password."));
         gtk_widget_show(d->label_error);
         return;
     }
 
     if (!new_pw || *new_pw == '\0') {
         gtk_label_set_text(GTK_LABEL(d->label_error),
-                           "Please enter a new password.");
+                           _("Please enter a new password."));
         gtk_widget_show(d->label_error);
         return;
     }
 
     if (g_strcmp0(new_pw, confirm_pw) != 0) {
         gtk_label_set_text(GTK_LABEL(d->label_error),
-                           "New passwords do not match.");
+                           _("New passwords do not match."));
         gtk_widget_show(d->label_error);
         return;
     }
 
     gtk_widget_set_sensitive(d->btn_change, FALSE);
-    gtk_label_set_text(GTK_LABEL(d->label_error), "Changing password…");
+    gtk_label_set_text(GTK_LABEL(d->label_error), _("Changing password…"));
     gtk_widget_show(d->label_error);
 
     /* Flush UI before the blocking Kerberos call. */
@@ -72,7 +73,7 @@ static void on_change_clicked(GtkButton *btn, PasswdDialogData *d)
 
         if (ret == KRB5KDC_ERR_PREAUTH_FAILED ||
             ret == KRB5KDC_ERR_C_PRINCIPAL_UNKNOWN) {
-            msg = "Current password is incorrect.";
+            msg = _("Current password is incorrect.");
         } else {
             msg = krb5_get_error_message(d->app->krb_ctx, ret);
             free_msg = TRUE;
@@ -122,13 +123,13 @@ gboolean krbtray_passwd_dialog_run(KrbTrayApp  *app,
     PasswdDialogData d = { .app = app, .principal_name = principal_name };
 
     d.dialog = gtk_dialog_new_with_buttons(
-        "Change Kerberos Password",
+        _("Change Kerberos Password"),
         NULL,
         GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-        "_Cancel", GTK_RESPONSE_CANCEL,
+        _("_Cancel"), GTK_RESPONSE_CANCEL,
         NULL);
 
-    d.btn_change = gtk_button_new_with_mnemonic("_Change Password");
+    d.btn_change = gtk_button_new_with_mnemonic(_("_Change Password"));
     gtk_style_context_add_class(
         gtk_widget_get_style_context(d.btn_change),
         GTK_STYLE_CLASS_SUGGESTED_ACTION);
@@ -146,8 +147,11 @@ gboolean krbtray_passwd_dialog_run(KrbTrayApp  *app,
     /* Optional must-change notice. */
     if (must_change) {
         GtkWidget *notice = gtk_label_new(NULL);
-        gtk_label_set_markup(GTK_LABEL(notice),
-            "<b>Your password must be changed before you can log in.</b>");
+        gchar *notice_markup = g_markup_printf_escaped(
+            "<b>%s</b>",
+            _("Your password must be changed before you can log in."));
+        gtk_label_set_markup(GTK_LABEL(notice), notice_markup);
+        g_free(notice_markup);
         gtk_label_set_line_wrap(GTK_LABEL(notice), TRUE);
         gtk_widget_set_halign(notice, GTK_ALIGN_START);
         gtk_box_pack_start(GTK_BOX(vbox), notice, FALSE, FALSE, 0);
@@ -165,7 +169,7 @@ gboolean krbtray_passwd_dialog_run(KrbTrayApp  *app,
     gint row = 0;
 
     /* Principal (read-only display). */
-    GtkWidget *lbl_p = gtk_label_new("Principal:");
+    GtkWidget *lbl_p = gtk_label_new(_("Principal:"));
     gtk_widget_set_halign(lbl_p, GTK_ALIGN_END);
     GtkWidget *lbl_pval = gtk_label_new(principal_name);
     gtk_widget_set_halign(lbl_pval, GTK_ALIGN_START);
@@ -174,7 +178,7 @@ gboolean krbtray_passwd_dialog_run(KrbTrayApp  *app,
     row++;
 
     /* Current password. */
-    GtkWidget *lbl_cur = gtk_label_new_with_mnemonic("_Current password:");
+    GtkWidget *lbl_cur = gtk_label_new_with_mnemonic(_("_Current password:"));
     gtk_widget_set_halign(lbl_cur, GTK_ALIGN_END);
     d.entry_current_pw = gtk_entry_new();
     gtk_entry_set_visibility(GTK_ENTRY(d.entry_current_pw), FALSE);
@@ -187,7 +191,7 @@ gboolean krbtray_passwd_dialog_run(KrbTrayApp  *app,
     row++;
 
     /* New password. */
-    GtkWidget *lbl_new = gtk_label_new_with_mnemonic("_New password:");
+    GtkWidget *lbl_new = gtk_label_new_with_mnemonic(_("_New password:"));
     gtk_widget_set_halign(lbl_new, GTK_ALIGN_END);
     d.entry_new_pw = gtk_entry_new();
     gtk_entry_set_visibility(GTK_ENTRY(d.entry_new_pw), FALSE);
@@ -200,7 +204,7 @@ gboolean krbtray_passwd_dialog_run(KrbTrayApp  *app,
     row++;
 
     /* Confirm new password. */
-    GtkWidget *lbl_conf = gtk_label_new_with_mnemonic("C_onfirm password:");
+    GtkWidget *lbl_conf = gtk_label_new_with_mnemonic(_("C_onfirm password:"));
     gtk_widget_set_halign(lbl_conf, GTK_ALIGN_END);
     d.entry_confirm_pw = gtk_entry_new();
     gtk_entry_set_visibility(GTK_ENTRY(d.entry_confirm_pw), FALSE);

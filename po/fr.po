@@ -1,0 +1,197 @@
+# krbtray – French translation
+# Copyright (C) 2022 WisTex TechSero Ltd. Co.
+# This file is distributed under the same licence as the krbtray package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: krbtray 1.0.0\n"
+"Report-Msgid-Bugs-To: https://github.com/edward-murrell/krbtray/issues\n"
+"POT-Creation-Date: 2026-03-21 00:00+0000\n"
+"PO-Revision-Date: 2026-03-21 00:00+0000\n"
+"Last-Translator: Edward Murrell <edward@murrell.co.nz>\n"
+"Language-Team: https://github.com/edward-murrell/krbtray\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+msgid "no tickets"
+msgstr "aucun ticket"
+
+msgid "expired"
+msgstr "expiré"
+
+msgid "Kerberos Tray"
+msgstr "Kerberos (zone de notification)"
+
+msgid "Kerberos Tray Monitor"
+msgstr "Moniteur Kerberos"
+
+msgid "No tickets"
+msgstr "Aucun ticket"
+
+msgid "  Renew Now"
+msgstr "  Renouveler maintenant"
+
+msgid "  Destroy Tickets"
+msgstr "  Détruire les tickets"
+
+msgid "  Authenticate…"
+msgstr "  Authentifier…"
+
+msgid "  Change Password…"
+msgstr "  Changer le mot de passe…"
+
+msgid "Add Principal…"
+msgstr "Ajouter un principal…"
+
+msgid "_Preferences…"
+msgstr "_Préférences…"
+
+msgid "_Quit"
+msgstr "_Quitter"
+
+msgid "Renewal failed for %s:\n%s"
+msgstr "Échec du renouvellement pour %s :\n%s"
+
+msgid "Destroy Kerberos tickets for %s?"
+msgstr "Détruire les tickets Kerberos pour %s ?"
+
+msgid "Kerberos tickets:\n"
+msgstr "Tickets Kerberos :\n"
+
+msgid "  (none)"
+msgstr "  (aucun)"
+
+msgid "Authenticate with Kerberos"
+msgstr "Authentification Kerberos"
+
+msgid "_Cancel"
+msgstr "_Annuler"
+
+msgid "_Authenticate"
+msgstr "_Authentifier"
+
+msgid "_Principal:"
+msgstr "_Principal :"
+
+msgid "Pass_word:"
+msgstr "Mot de _passe :"
+
+msgid "_Remember password in keyring"
+msgstr "_Mémoriser le mot de passe dans le trousseau"
+
+msgid "Please enter a principal."
+msgstr "Veuillez saisir un principal."
+
+msgid "Authenticating…"
+msgstr "Authentification en cours…"
+
+msgid "Change Kerberos Password"
+msgstr "Changer le mot de passe Kerberos"
+
+msgid "_Change Password"
+msgstr "_Changer le mot de passe"
+
+msgid "Your password must be changed before you can log in."
+msgstr "Vous devez changer votre mot de passe avant de vous connecter."
+
+msgid "Principal:"
+msgstr "Principal :"
+
+msgid "_Current password:"
+msgstr "Mot de passe _actuel :"
+
+msgid "_New password:"
+msgstr "_Nouveau mot de passe :"
+
+msgid "C_onfirm password:"
+msgstr "C_onfirmer le mot de passe :"
+
+msgid "Please enter your current password."
+msgstr "Veuillez saisir votre mot de passe actuel."
+
+msgid "Please enter a new password."
+msgstr "Veuillez saisir un nouveau mot de passe."
+
+msgid "New passwords do not match."
+msgstr "Les nouveaux mots de passe ne correspondent pas."
+
+msgid "Changing password…"
+msgstr "Changement du mot de passe en cours…"
+
+msgid "Current password is incorrect."
+msgstr "Le mot de passe actuel est incorrect."
+
+msgid "Valid"
+msgstr "Valide"
+
+msgid "Expiring"
+msgstr "Expirant"
+
+msgid "Expired"
+msgstr "Expiré"
+
+msgid "Preferences"
+msgstr "Préférences"
+
+msgid "_Apply"
+msgstr "_Appliquer"
+
+msgid "Renew TGT"
+msgstr "Renouveler le TGT"
+
+msgid "minutes before expiry"
+msgstr "minutes avant expiration"
+
+msgid "Check ticket status every"
+msgstr "Vérifier l'état des tickets toutes les"
+
+msgid "seconds"
+msgstr "secondes"
+
+msgid "_Start automatically on login"
+msgstr "_Démarrer automatiquement à la connexion"
+
+msgid "General"
+msgstr "Général"
+
+msgid "Principals"
+msgstr "Principaux"
+
+msgid "Principal"
+msgstr "Principal"
+
+msgid "State"
+msgstr "État"
+
+msgid "Store password"
+msgstr "Stocker le mot de passe"
+
+msgid "Auto kinit"
+msgstr "Kinit automatique"
+
+msgid "Remove"
+msgstr "Supprimer"
+
+msgid "Authenticate…"
+msgstr "Authentifier…"
+
+msgid "Change Password…"
+msgstr "Changer le mot de passe…"
+
+msgid "Clear Password"
+msgstr "Effacer le mot de passe"
+
+msgid "Remove principal \"%s\" from the managed list?"
+msgstr "Retirer le principal « %s » de la liste gérée ?"
+
+msgid "Kerberos Renewal Failed"
+msgstr "Échec du renouvellement Kerberos"
+
+msgid "Could not renew Kerberos tickets for <b>%s</b>.\n%s"
+msgstr "Impossible de renouveler les tickets Kerberos pour <b>%s</b>.\n%s"
+
+msgid "Unknown error."
+msgstr "Erreur inconnue."

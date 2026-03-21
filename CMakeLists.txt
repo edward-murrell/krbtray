@@ -46,6 +46,40 @@ set(SOURCES
 
 add_executable(krbtray ${SOURCES})
 
+# ── Internationalisation ──────────────────────────────────────────────────────
+find_program(MSGFMT_EXECUTABLE msgfmt REQUIRED)
+
+set(GETTEXT_PACKAGE "krbtray")
+
+# During a normal install the .mo files live under the system locale dir.
+# When building a Debian package CMAKE_INSTALL_FULL_LOCALEDIR resolves to
+# the correct path (/usr/share/locale) automatically.
+add_compile_definitions(
+    GETTEXT_PACKAGE="${GETTEXT_PACKAGE}"
+    LOCALEDIR="${CMAKE_INSTALL_FULL_LOCALEDIR}"
+)
+
+set(LANGUAGES en_US es fr de)
+set(MO_FILES "")
+foreach(LANG IN LISTS LANGUAGES)
+    set(PO_FILE  "${CMAKE_CURRENT_SOURCE_DIR}/po/${LANG}.po")
+    set(MO_DIR   "${CMAKE_CURRENT_BINARY_DIR}/po/${LANG}/LC_MESSAGES")
+    set(MO_FILE  "${MO_DIR}/${GETTEXT_PACKAGE}.mo")
+    add_custom_command(
+        OUTPUT  "${MO_FILE}"
+        COMMAND "${CMAKE_COMMAND}" -E make_directory "${MO_DIR}"
+        COMMAND "${MSGFMT_EXECUTABLE}" -o "${MO_FILE}" "${PO_FILE}"
+        DEPENDS "${PO_FILE}"
+        COMMENT "Compiling ${LANG} translation"
+    )
+    list(APPEND MO_FILES "${MO_FILE}")
+    install(FILES "${MO_FILE}"
+        DESTINATION "${CMAKE_INSTALL_LOCALEDIR}/${LANG}/LC_MESSAGES")
+endforeach()
+
+add_custom_target(translations ALL DEPENDS ${MO_FILES})
+add_dependencies(krbtray translations)
+
 target_include_directories(krbtray PRIVATE
     src
     ${GTK3_INCLUDE_DIRS}

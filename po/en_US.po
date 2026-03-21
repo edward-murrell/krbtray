@@ -1,0 +1,200 @@
+# krbtray – American English translation
+# Copyright (C) 2022 WisTex TechSero Ltd. Co.
+# This file is distributed under the same licence as the krbtray package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: krbtray 1.0.0\n"
+"Report-Msgid-Bugs-To: https://github.com/edward-murrell/krbtray/issues\n"
+"POT-Creation-Date: 2026-03-21 00:00+0000\n"
+"PO-Revision-Date: 2026-03-21 00:00+0000\n"
+"Last-Translator: Edward Murrell <edward@murrell.co.nz>\n"
+"Language-Team: https://github.com/edward-murrell/krbtray\n"
+"Language: en_US\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# American English is largely identical to British English for this
+# application.  Override only strings that genuinely differ.
+
+msgid "no tickets"
+msgstr "no tickets"
+
+msgid "expired"
+msgstr "expired"
+
+msgid "Kerberos Tray"
+msgstr "Kerberos Tray"
+
+msgid "Kerberos Tray Monitor"
+msgstr "Kerberos Tray Monitor"
+
+msgid "No tickets"
+msgstr "No tickets"
+
+msgid "  Renew Now"
+msgstr "  Renew Now"
+
+msgid "  Destroy Tickets"
+msgstr "  Destroy Tickets"
+
+msgid "  Authenticate…"
+msgstr "  Authenticate…"
+
+msgid "  Change Password…"
+msgstr "  Change Password…"
+
+msgid "Add Principal…"
+msgstr "Add Principal…"
+
+msgid "_Preferences…"
+msgstr "_Preferences…"
+
+msgid "_Quit"
+msgstr "_Quit"
+
+msgid "Renewal failed for %s:\n%s"
+msgstr "Renewal failed for %s:\n%s"
+
+msgid "Destroy Kerberos tickets for %s?"
+msgstr "Destroy Kerberos tickets for %s?"
+
+msgid "Kerberos tickets:\n"
+msgstr "Kerberos tickets:\n"
+
+msgid "  (none)"
+msgstr "  (none)"
+
+msgid "Authenticate with Kerberos"
+msgstr "Authenticate with Kerberos"
+
+msgid "_Cancel"
+msgstr "_Cancel"
+
+msgid "_Authenticate"
+msgstr "_Authenticate"
+
+msgid "_Principal:"
+msgstr "_Principal:"
+
+msgid "Pass_word:"
+msgstr "Pass_word:"
+
+msgid "_Remember password in keyring"
+msgstr "_Remember password in keyring"
+
+msgid "Please enter a principal."
+msgstr "Please enter a principal."
+
+msgid "Authenticating…"
+msgstr "Authenticating…"
+
+msgid "Change Kerberos Password"
+msgstr "Change Kerberos Password"
+
+msgid "_Change Password"
+msgstr "_Change Password"
+
+msgid "Your password must be changed before you can log in."
+msgstr "Your password must be changed before you can sign in."
+
+msgid "Principal:"
+msgstr "Principal:"
+
+msgid "_Current password:"
+msgstr "_Current password:"
+
+msgid "_New password:"
+msgstr "_New password:"
+
+msgid "C_onfirm password:"
+msgstr "C_onfirm password:"
+
+msgid "Please enter your current password."
+msgstr "Please enter your current password."
+
+msgid "Please enter a new password."
+msgstr "Please enter a new password."
+
+msgid "New passwords do not match."
+msgstr "New passwords do not match."
+
+msgid "Changing password…"
+msgstr "Changing password…"
+
+msgid "Current password is incorrect."
+msgstr "Current password is incorrect."
+
+msgid "Valid"
+msgstr "Valid"
+
+msgid "Expiring"
+msgstr "Expiring"
+
+msgid "Expired"
+msgstr "Expired"
+
+msgid "Preferences"
+msgstr "Preferences"
+
+msgid "_Apply"
+msgstr "_Apply"
+
+msgid "Renew TGT"
+msgstr "Renew TGT"
+
+msgid "minutes before expiry"
+msgstr "minutes before expiration"
+
+msgid "Check ticket status every"
+msgstr "Check ticket status every"
+
+msgid "seconds"
+msgstr "seconds"
+
+msgid "_Start automatically on login"
+msgstr "_Start automatically on login"
+
+msgid "General"
+msgstr "General"
+
+msgid "Principals"
+msgstr "Principals"
+
+msgid "Principal"
+msgstr "Principal"
+
+msgid "State"
+msgstr "State"
+
+msgid "Store password"
+msgstr "Store password"
+
+msgid "Auto kinit"
+msgstr "Auto kinit"
+
+msgid "Remove"
+msgstr "Remove"
+
+msgid "Authenticate…"
+msgstr "Authenticate…"
+
+msgid "Change Password…"
+msgstr "Change Password…"
+
+msgid "Clear Password"
+msgstr "Clear Password"
+
+msgid "Remove principal \"%s\" from the managed list?"
+msgstr "Remove principal \"%s\" from the managed list?"
+
+msgid "Kerberos Renewal Failed"
+msgstr "Kerberos Renewal Failed"
+
+msgid "Could not renew Kerberos tickets for <b>%s</b>.\n%s"
+msgstr "Could not renew Kerberos tickets for <b>%s</b>.\n%s"
+
+msgid "Unknown error."
+msgstr "Unknown error."

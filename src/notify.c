@@ -2,6 +2,7 @@
 
 #include <libnotify/notify.h>
 #include <glib.h>
+#include <glib/gi18n.h>
 
 /* Initialise the libnotify library.  Must be called before any notifications
  * are shown. */
@@ -22,12 +23,12 @@ void krbtray_notify_renewal_failed(const gchar *principal_name,
                                    const gchar *error_message)
 {
     gchar *body = g_strdup_printf(
-        "Could not renew Kerberos tickets for <b>%s</b>.\n%s",
+        _("Could not renew Kerberos tickets for <b>%s</b>.\n%s"),
         principal_name,
-        error_message ? error_message : "Unknown error.");
+        error_message ? error_message : _("Unknown error."));
 
     NotifyNotification *n = notify_notification_new(
-        "Kerberos Renewal Failed", body, "security-low");
+        _("Kerberos Renewal Failed"), body, "security-low");
     notify_notification_set_urgency(n, NOTIFY_URGENCY_CRITICAL);
 
     GError *err = NULL;

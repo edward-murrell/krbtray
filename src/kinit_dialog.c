@@ -4,6 +4,7 @@
 #include "passwd_dialog.h"
 
 #include <gtk/gtk.h>
+#include <glib/gi18n.h>
 #include <string.h>
 
 /* Custom response code: kinit succeeded but the KDC requires a password change. */
@@ -37,13 +38,13 @@ static void on_login_clicked(GtkButton *btn, KinitDialogData *d)
 
     if (!principal || *principal == '\0') {
         gtk_label_set_text(GTK_LABEL(d->label_error),
-                           "Please enter a principal.");
+                           _("Please enter a principal."));
         gtk_widget_show(d->label_error);
         return;
     }
 
     gtk_widget_set_sensitive(d->btn_login, FALSE);
-    gtk_label_set_text(GTK_LABEL(d->label_error), "Authenticating…");
+    gtk_label_set_text(GTK_LABEL(d->label_error), _("Authenticating…"));
     gtk_widget_show(d->label_error);
 
     /* Process pending events so the UI updates before blocking in kinit. */
@@ -109,13 +110,13 @@ gboolean krbtray_kinit_dialog_run(KrbTrayApp *app, const gchar *principal_name)
     KinitDialogData d = { .app = app };
 
     d.dialog = gtk_dialog_new_with_buttons(
-        "Authenticate with Kerberos",
+        _("Authenticate with Kerberos"),
         NULL,
         GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-        "_Cancel", GTK_RESPONSE_CANCEL,
+        _("_Cancel"), GTK_RESPONSE_CANCEL,
         NULL);
 
-    d.btn_login = gtk_button_new_with_mnemonic("_Authenticate");
+    d.btn_login = gtk_button_new_with_mnemonic(_("_Authenticate"));
     gtk_style_context_add_class(gtk_widget_get_style_context(d.btn_login),
                                 GTK_STYLE_CLASS_SUGGESTED_ACTION);
     gtk_dialog_add_action_widget(GTK_DIALOG(d.dialog), d.btn_login,
@@ -135,7 +136,7 @@ gboolean krbtray_kinit_dialog_run(KrbTrayApp *app, const gchar *principal_name)
     gint row = 0;
 
     /* Principal. */
-    GtkWidget *lbl_p = gtk_label_new_with_mnemonic("_Principal:");
+    GtkWidget *lbl_p = gtk_label_new_with_mnemonic(_("_Principal:"));
     gtk_widget_set_halign(lbl_p, GTK_ALIGN_END);
     d.entry_principal = gtk_entry_new();
     gtk_entry_set_width_chars(GTK_ENTRY(d.entry_principal), 32);
@@ -149,7 +150,7 @@ gboolean krbtray_kinit_dialog_run(KrbTrayApp *app, const gchar *principal_name)
     row++;
 
     /* Password. */
-    GtkWidget *lbl_pw = gtk_label_new_with_mnemonic("Pass_word:");
+    GtkWidget *lbl_pw = gtk_label_new_with_mnemonic(_("Pass_word:"));
     gtk_widget_set_halign(lbl_pw, GTK_ALIGN_END);
     d.entry_password = gtk_entry_new();
     gtk_entry_set_visibility(GTK_ENTRY(d.entry_password), FALSE);
@@ -162,7 +163,7 @@ gboolean krbtray_kinit_dialog_run(KrbTrayApp *app, const gchar *principal_name)
 
     /* Remember password checkbox. */
     d.check_remember =
-        gtk_check_button_new_with_mnemonic("_Remember password in keyring");
+        gtk_check_button_new_with_mnemonic(_("_Remember password in keyring"));
 
     /* Pre-check if the principal already has store_password set. */
     if (principal_name) {

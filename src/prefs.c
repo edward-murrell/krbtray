@@ -5,6 +5,7 @@
 #include "passwd_dialog.h"
 
 #include <gtk/gtk.h>
+#include <glib/gi18n.h>
 #include <string.h>
 
 /* ── Column indices for the principals list store ────────────────────────── */
@@ -42,10 +43,10 @@ typedef struct {
 static const gchar *state_string(KrbState state)
 {
     switch (state) {
-    case KRB_STATE_VALID:      return "Valid";
-    case KRB_STATE_EXPIRING:   return "Expiring";
-    case KRB_STATE_EXPIRED:    return "Expired";
-    default:                   return "No tickets";
+    case KRB_STATE_VALID:      return _("Valid");
+    case KRB_STATE_EXPIRING:   return _("Expiring");
+    case KRB_STATE_EXPIRED:    return _("Expired");
+    default:                   return _("No tickets");
     }
 }
 
@@ -111,7 +112,7 @@ static void on_remove_principal(GtkButton *btn, PrefsData *pd)
         GTK_DIALOG_MODAL,
         GTK_MESSAGE_QUESTION,
         GTK_BUTTONS_YES_NO,
-        "Remove principal \"%s\" from the managed list?", name);
+        _("Remove principal \"%s\" from the managed list?"), name);
     gint r = gtk_dialog_run(GTK_DIALOG(dlg));
     gtk_widget_destroy(dlg);
 
@@ -242,25 +243,16 @@ static GtkWidget *build_general_page(PrefsData *pd)
     gint row = 0;
 
     /* Renewal threshold. */
-    GtkWidget *lbl1 = gtk_label_new_with_mnemonic(
-        "Renew TGT ___ minutes before expiry:");
-    gtk_widget_set_halign(lbl1, GTK_ALIGN_START);
-
-    pd->spin_threshold =
-        gtk_spin_button_new_with_range(1, 120, 1);
+    pd->spin_threshold = gtk_spin_button_new_with_range(1, 120, 1);
     gtk_spin_button_set_value(GTK_SPIN_BUTTON(pd->spin_threshold),
                               pd->app->renewal_threshold_mins);
-    gtk_label_set_mnemonic_widget(GTK_LABEL(lbl1), pd->spin_threshold);
-
-    GtkWidget *lbl1b = gtk_label_new("minutes before expiry");
-    gtk_widget_set_halign(lbl1b, GTK_ALIGN_START);
 
     GtkWidget *hbox1 = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
     gtk_box_pack_start(GTK_BOX(hbox1),
-        gtk_label_new("Renew TGT"), FALSE, FALSE, 0);
+        gtk_label_new(_("Renew TGT")), FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(hbox1), pd->spin_threshold, FALSE, FALSE, 0);
-    gtk_box_pack_start(GTK_BOX(hbox1), lbl1b, FALSE, FALSE, 0);
-    (void)lbl1;
+    gtk_box_pack_start(GTK_BOX(hbox1),
+        gtk_label_new(_("minutes before expiry")), FALSE, FALSE, 0);
     gtk_grid_attach(GTK_GRID(grid), hbox1, 0, row, 2, 1);
     row++;
 
@@ -270,16 +262,16 @@ static GtkWidget *build_general_page(PrefsData *pd)
     gtk_spin_button_set_value(GTK_SPIN_BUTTON(pd->spin_interval),
                               pd->app->check_interval_secs);
     gtk_box_pack_start(GTK_BOX(hbox2),
-        gtk_label_new("Check ticket status every"), FALSE, FALSE, 0);
+        gtk_label_new(_("Check ticket status every")), FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(hbox2), pd->spin_interval, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(hbox2),
-        gtk_label_new("seconds"), FALSE, FALSE, 0);
+        gtk_label_new(_("seconds")), FALSE, FALSE, 0);
     gtk_grid_attach(GTK_GRID(grid), hbox2, 0, row, 2, 1);
     row++;
 
     /* Autostart. */
     pd->check_autostart =
-        gtk_check_button_new_with_mnemonic("_Start automatically on login");
+        gtk_check_button_new_with_mnemonic(_("_Start automatically on login"));
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(pd->check_autostart),
                                  pd->app->autostart);
     gtk_grid_attach(GTK_GRID(grid), pd->check_autostart, 0, row, 2, 1);
@@ -309,7 +301,7 @@ static GtkWidget *build_principals_page(PrefsData *pd)
     GtkCellRenderer *r_text = gtk_cell_renderer_text_new();
     GtkTreeViewColumn *col_p =
         gtk_tree_view_column_new_with_attributes(
-            "Principal", r_text, "text", COL_PRINCIPAL, NULL);
+            _("Principal"), r_text, "text", COL_PRINCIPAL, NULL);
     gtk_tree_view_column_set_expand(col_p, TRUE);
     gtk_tree_view_append_column(GTK_TREE_VIEW(pd->tree_view), col_p);
 
@@ -317,7 +309,7 @@ static GtkWidget *build_principals_page(PrefsData *pd)
     GtkCellRenderer *r_state = gtk_cell_renderer_text_new();
     gtk_tree_view_append_column(GTK_TREE_VIEW(pd->tree_view),
         gtk_tree_view_column_new_with_attributes(
-            "State", r_state, "text", COL_STATE_STR, NULL));
+            _("State"), r_state, "text", COL_STATE_STR, NULL));
 
     /* Column: Store password (toggle). */
     GtkCellRenderer *r_pw = gtk_cell_renderer_toggle_new();
@@ -325,7 +317,7 @@ static GtkWidget *build_principals_page(PrefsData *pd)
                      G_CALLBACK(on_store_pw_toggled), pd);
     gtk_tree_view_append_column(GTK_TREE_VIEW(pd->tree_view),
         gtk_tree_view_column_new_with_attributes(
-            "Store password", r_pw, "active", COL_STORE_PW, NULL));
+            _("Store password"), r_pw, "active", COL_STORE_PW, NULL));
 
     /* Column: Auto kinit (toggle). */
     GtkCellRenderer *r_ak = gtk_cell_renderer_toggle_new();
@@ -333,7 +325,7 @@ static GtkWidget *build_principals_page(PrefsData *pd)
                      G_CALLBACK(on_auto_kinit_toggled), pd);
     gtk_tree_view_append_column(GTK_TREE_VIEW(pd->tree_view),
         gtk_tree_view_column_new_with_attributes(
-            "Auto kinit", r_ak, "active", COL_AUTO_KINIT, NULL));
+            _("Auto kinit"), r_ak, "active", COL_AUTO_KINIT, NULL));
 
     /* Scrolled window around the tree view. */
     GtkWidget *sw = gtk_scrolled_window_new(NULL, NULL);
@@ -348,30 +340,30 @@ static GtkWidget *build_principals_page(PrefsData *pd)
     gtk_toolbar_set_style(GTK_TOOLBAR(toolbar), GTK_TOOLBAR_TEXT);
     gtk_box_pack_start(GTK_BOX(vbox), toolbar, FALSE, FALSE, 0);
 
-    GtkToolItem *btn_add = gtk_tool_button_new(NULL, "Add Principal…");
+    GtkToolItem *btn_add = gtk_tool_button_new(NULL, _("Add Principal…"));
     gtk_toolbar_insert(GTK_TOOLBAR(toolbar), btn_add, -1);
     g_signal_connect(btn_add, "clicked",
                      G_CALLBACK(on_add_principal), pd);
 
-    pd->btn_remove = GTK_WIDGET(gtk_tool_button_new(NULL, "Remove"));
+    pd->btn_remove = GTK_WIDGET(gtk_tool_button_new(NULL, _("Remove")));
     gtk_toolbar_insert(GTK_TOOLBAR(toolbar),
                        GTK_TOOL_ITEM(pd->btn_remove), -1);
     g_signal_connect(pd->btn_remove, "clicked",
                      G_CALLBACK(on_remove_principal), pd);
 
-    pd->btn_auth = GTK_WIDGET(gtk_tool_button_new(NULL, "Authenticate…"));
+    pd->btn_auth = GTK_WIDGET(gtk_tool_button_new(NULL, _("Authenticate…")));
     gtk_toolbar_insert(GTK_TOOLBAR(toolbar),
                        GTK_TOOL_ITEM(pd->btn_auth), -1);
     g_signal_connect(pd->btn_auth, "clicked",
                      G_CALLBACK(on_authenticate), pd);
 
-    pd->btn_change_pw = GTK_WIDGET(gtk_tool_button_new(NULL, "Change Password…"));
+    pd->btn_change_pw = GTK_WIDGET(gtk_tool_button_new(NULL, _("Change Password…")));
     gtk_toolbar_insert(GTK_TOOLBAR(toolbar),
                        GTK_TOOL_ITEM(pd->btn_change_pw), -1);
     g_signal_connect(pd->btn_change_pw, "clicked",
                      G_CALLBACK(on_change_password), pd);
 
-    pd->btn_clear_pw = GTK_WIDGET(gtk_tool_button_new(NULL, "Clear Password"));
+    pd->btn_clear_pw = GTK_WIDGET(gtk_tool_button_new(NULL, _("Clear Password")));
     gtk_toolbar_insert(GTK_TOOLBAR(toolbar),
                        GTK_TOOL_ITEM(pd->btn_clear_pw), -1);
     g_signal_connect(pd->btn_clear_pw, "clicked",
@@ -397,11 +389,11 @@ void krbtray_prefs_show(KrbTrayApp *app)
     PrefsData pd = { .app = app };
 
     GtkWidget *dialog = gtk_dialog_new_with_buttons(
-        "Preferences",
+        _("Preferences"),
         NULL,
         GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-        "_Cancel", GTK_RESPONSE_CANCEL,
-        "_Apply",  GTK_RESPONSE_APPLY,
+        _("_Cancel"), GTK_RESPONSE_CANCEL,
+        _("_Apply"),  GTK_RESPONSE_APPLY,
         NULL);
     gtk_window_set_default_size(GTK_WINDOW(dialog), 480, -1);
 
@@ -412,10 +404,10 @@ void krbtray_prefs_show(KrbTrayApp *app)
 
     gtk_notebook_append_page(GTK_NOTEBOOK(notebook),
         build_general_page(&pd),
-        gtk_label_new("General"));
+        gtk_label_new(_("General")));
     gtk_notebook_append_page(GTK_NOTEBOOK(notebook),
         build_principals_page(&pd),
-        gtk_label_new("Principals"));
+        gtk_label_new(_("Principals")));
 
     gtk_widget_show_all(dialog);
 
