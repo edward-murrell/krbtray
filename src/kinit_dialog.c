@@ -1,9 +1,13 @@
 #include "kinit_dialog.h"
 #include "kerberos.h"
 #include "keyring.h"
+#include "passwd_dialog.h"
 
 #include <gtk/gtk.h>
 #include <string.h>
+
+/* Custom response code: kinit succeeded but the KDC requires a password change. */
+#define RESPONSE_MUST_CHANGE_PW 100
 
 /* ── Dialog state ────────────────────────────────────────────────────────── */
 
@@ -50,6 +54,13 @@ static void on_login_clicked(GtkButton *btn, KinitDialogData *d)
         krbtray_krb_kinit(d->app->krb_ctx, principal, password);
 
     if (ret != 0) {
+        /* The KDC requires a password change before granting a TGT. */
+        if (ret == KRB5KDC_ERR_KEY_EXPIRED) {
+            gtk_dialog_response(GTK_DIALOG(d->dialog),
+                                RESPONSE_MUST_CHANGE_PW);
+            return;
+        }
+
         const char *msg = krb5_get_error_message(d->app->krb_ctx, ret);
         gchar *markup = g_markup_printf_escaped(
             "<span foreground='red'>%s</span>", msg);
@@ -190,7 +201,20 @@ gboolean krbtray_kinit_dialog_run(KrbTrayApp *app, const gchar *principal_name)
         gtk_widget_grab_focus(d.entry_principal);
 
     gint response = gtk_dialog_run(GTK_DIALOG(d.dialog));
+
+    /* Capture the principal before the dialog is destroyed — it may have
+     * been typed by the user rather than passed in. */
+    gchar *actual_principal = g_strdup(
+        gtk_entry_get_text(GTK_ENTRY(d.entry_principal)));
+
     gtk_widget_destroy(d.dialog);
 
+    if (response == RESPONSE_MUST_CHANGE_PW) {
+        gboolean ok = krbtray_passwd_dialog_run(app, actual_principal, TRUE);
+        g_free(actual_principal);
+        return ok;
+    }
+
+    g_free(actual_principal);
     return response == GTK_RESPONSE_OK;
 }

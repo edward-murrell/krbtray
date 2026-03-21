@@ -3,6 +3,7 @@
 #include "tray.h"
 #include "notify.h"
 #include "keyring.h"
+#include "passwd_dialog.h"
 
 #include <glib/gstdio.h>
 #include <gio/gio.h>
@@ -306,6 +307,15 @@ void krbtray_app_refresh(KrbTrayApp *app)
         krb5_error_code ret =
             krbtray_krb_kinit(app->krb_ctx, e->principal_name, pw);
         g_free(pw);
+
+        if (ret == KRB5KDC_ERR_KEY_EXPIRED) {
+            /* Password has expired — prompt the user to change it before
+             * continuing.  Disable auto-kinit so we don't loop. */
+            e->auto_kinit = FALSE;
+            krbtray_passwd_dialog_run(app, e->principal_name, TRUE);
+            continue;
+        }
+
         if (ret == 0) {
             /* Don't keep re-trying auto_kinit in subsequent timer ticks. */
             e->auto_kinit = FALSE;
