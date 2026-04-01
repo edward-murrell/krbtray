@@ -266,6 +266,10 @@ void krbtray_app_refresh(KrbTrayApp *app)
         KrbPrincipalEntry *e = l->data;
         if (!e->has_tickets || !e->renewable)
             continue;
+        /* Skip renewal if the renewal window itself has closed (e.g. after
+         * a long suspend).  Step 5 will auto-kinit instead. */
+        if (e->renew_till > 0 && time(NULL) >= e->renew_till)
+            continue;
         if (e->state == KRB_STATE_EXPIRING || e->state == KRB_STATE_EXPIRED) {
             krb5_error_code ret =
                 krbtray_krb_renew(app->krb_ctx, e->principal_name);

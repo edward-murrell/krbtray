@@ -2,6 +2,13 @@
 
 All notable changes to krbtray are documented here.
 
+## [1.1.1] – 2026-04-01
+
+- Fix spurious "Kerberos Renewal Failed" notification after resuming from sleep
+  when tickets have fully expired (renewal window closed).  The renewal step now
+  checks `renew_till` before attempting renewal; expired-and-non-renewable
+  tickets fall through to auto-kinit silently.
+
 ## [1.1.0] – 2026-03-21
 
 - Add function comments throughout (intent-based, English).

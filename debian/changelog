@@ -1,3 +1,12 @@
+krbtray (1.1.1) faye; urgency=medium
+
+  * Fix spurious "Kerberos Renewal Failed" notification after resuming from
+    sleep when tickets have fully expired (renewal window closed). The
+    renewal step now checks renew_till before attempting renewal;
+    expired-and-non-renewable tickets fall through to auto-kinit silently.
+
+ -- Edward Murrell <edward@murrell.co.nz>  Wed, 01 Apr 2026 00:00:00 +1100
+
 krbtray (1.1.0) faye; urgency=medium
 
   * Add function comments throughout (intent-based, English).
