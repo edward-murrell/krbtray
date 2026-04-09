@@ -49,8 +49,14 @@ msgstr "Ajouter un principal…"
 msgid "_Preferences…"
 msgstr "_Préférences…"
 
+msgid "_About…"
+msgstr "À _propos…"
+
 msgid "_Quit"
 msgstr "_Quitter"
+
+msgid "Kerberos ticket management tray icon"
+msgstr "Icône de gestion des tickets Kerberos"
 
 msgid "Renewal failed for %s:\n%s"
 msgstr "Échec du renouvellement pour %s :\n%s"

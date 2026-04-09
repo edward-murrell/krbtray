@@ -61,7 +61,15 @@ msgid "_Preferences…"
 msgstr ""
 
 #: src/tray.c
+msgid "_About…"
+msgstr ""
+
+#: src/tray.c
 msgid "_Quit"
+msgstr ""
+
+#: src/tray.c
+msgid "Kerberos ticket management tray icon"
 msgstr ""
 
 #: src/tray.c

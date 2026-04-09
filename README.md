@@ -41,6 +41,7 @@ krbtray sits in your system tray, monitors the state of all Kerberos TGTs in you
 sudo apt install \
     cmake \
     pkg-config \
+    gettext \
     libgtk-3-dev \
     heimdal-dev \
     libsecret-1-dev \
@@ -52,16 +53,9 @@ sudo apt install \
 ### Debian package (recommended)
 
 ```bash
-# Build the package
-dpkg-buildpackage --no-sign
-
-# Install it
-sudo dpkg -i ../krbtray_1.0.0_amd64.deb
+cmake -B build -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build --target package
+sudo dpkg -i build/krbtray-1.1.1-Linux.deb
 ```
-
-To sign the package with your GPG key, omit `--no-sign`. A companion
-`krbtray-dbgsym` package containing detached debug symbols is produced
-automatically alongside the main package.
 
 ### Manual build with CMake
 

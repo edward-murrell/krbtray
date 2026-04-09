@@ -52,4 +52,9 @@ Step 5 of `krbtray_app_refresh` attempts auto-kinit when `needs_new_creds` is tr
 ## Build system notes
 - Requires `gettext` (provides `msgfmt`) in addition to the existing dependencies.  Already listed in `debian/control` Build-Depends.
 - `GETTEXT_PACKAGE` is defined as `"krbtray"`; `LOCALEDIR` resolves to `CMAKE_INSTALL_FULL_LOCALEDIR` at compile time.
+- `KRBTRAY_VERSION` is defined from `CMAKE_PROJECT_VERSION` at compile time; the About dialog reads this value.  The `project(VERSION ...)` line in `CMakeLists.txt` is the single source of truth for the version number.
+- CPack is configured to produce `.deb` packages via `cmake --build build --target package`.
 - GIO (`<gio/gio.h>`) is used for D-Bus (power-resume monitoring); it is a transitive dependency of GTK3 and requires no extra `pkg_check_modules` entry.
+
+## Documentation
+- When build instructions, dependencies, or build commands change, update `README.md` to match.

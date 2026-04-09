@@ -52,8 +52,14 @@ msgstr "Add Principal…"
 msgid "_Preferences…"
 msgstr "_Preferences…"
 
+msgid "_About…"
+msgstr "_About…"
+
 msgid "_Quit"
 msgstr "_Quit"
+
+msgid "Kerberos ticket management tray icon"
+msgstr "Kerberos ticket management tray icon"
 
 msgid "Renewal failed for %s:\n%s"
 msgstr "Renewal failed for %s:\n%s"
