@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(krbtray VERSION 1.1.1 LANGUAGES C)
+project(krbtray VERSION 1.1.2 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -57,6 +57,7 @@ set(GETTEXT_PACKAGE "krbtray")
 add_compile_definitions(
     GETTEXT_PACKAGE="${GETTEXT_PACKAGE}"
     LOCALEDIR="${CMAKE_INSTALL_FULL_LOCALEDIR}"
+    KRBTRAY_VERSION="${CMAKE_PROJECT_VERSION}"
 )
 
 set(LANGUAGES en_US es fr de)
@@ -124,3 +125,12 @@ configure_file(
     @ONLY)
 install(FILES ${CMAKE_BINARY_DIR}/krbtray.desktop
     DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+
+# ── Debian package (CPack) ───────────────────────────────────────────────────
+set(CPACK_GENERATOR "DEB")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Edward Murrell <edward@murrell.co.nz>")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Kerberos ticket management tray icon")
+set(CPACK_DEBIAN_PACKAGE_SECTION "net")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS
+    "libgtk-3-0, libsecret-1-0, libnotify4, libkrb5-26-heimdal")
+include(CPack)

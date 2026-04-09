@@ -117,6 +117,25 @@ static void on_menu_prefs(GtkMenuItem *item, KrbTrayApp *app)
     krbtray_prefs_show(app);
 }
 
+/* Menu handler: show the About dialog with version and project details. */
+static void on_menu_about(GtkMenuItem *item, KrbTrayApp *app)
+{
+    (void)item;
+    (void)app;
+
+    const gchar *authors[] = { "Edward Murrell", NULL };
+
+    gtk_show_about_dialog(
+        NULL,
+        "program-name",  "Kerberos Tray",
+        "version",       KRBTRAY_VERSION,
+        "comments",      _("Kerberos ticket management tray icon"),
+        "authors",       authors,
+        "license-type",  GTK_LICENSE_GPL_3_0,
+        "logo-icon-name","security-high",
+        NULL);
+}
+
 /* Menu handler: exit the application. */
 static void on_menu_quit(GtkMenuItem *item, KrbTrayApp *app)
 {
@@ -225,6 +244,12 @@ static GtkWidget *build_menu(KrbTrayApp *app)
     g_signal_connect(prefs_item, "activate",
                      G_CALLBACK(on_menu_prefs), app);
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), prefs_item);
+
+    /* About. */
+    GtkWidget *about_item = gtk_menu_item_new_with_mnemonic(_("_About…"));
+    g_signal_connect(about_item, "activate",
+                     G_CALLBACK(on_menu_about), app);
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), about_item);
 
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
 

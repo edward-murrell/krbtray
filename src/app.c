@@ -270,6 +270,12 @@ void krbtray_app_refresh(KrbTrayApp *app)
          * a long suspend).  Step 5 will auto-kinit instead. */
         if (e->renew_till > 0 && time(NULL) >= e->renew_till)
             continue;
+        /* Skip renewal for expired tickets when auto-kinit will handle
+         * them in step 5 — avoids a spurious "renewal failed" notification
+         * on resume from sleep. */
+        if (e->state == KRB_STATE_EXPIRED &&
+            e->managed && e->auto_kinit && e->store_password)
+            continue;
         if (e->state == KRB_STATE_EXPIRING || e->state == KRB_STATE_EXPIRED) {
             krb5_error_code ret =
                 krbtray_krb_renew(app->krb_ctx, e->principal_name);

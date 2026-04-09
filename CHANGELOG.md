@@ -2,6 +2,13 @@
 
 All notable changes to krbtray are documented here.
 
+## [1.1.2] – 2026-04-10
+
+- Fix spurious "Kerberos Renewal Failed" notification after resuming from sleep
+  when tickets have expired but the renewal window has not yet closed.  The
+  renewal step now skips expired tickets that will be handled by auto-kinit,
+  avoiding a confusing "Matching credential not found" notification.
+
 ## [1.1.1] – 2026-04-01
 
 - Fix spurious "Kerberos Renewal Failed" notification after resuming from sleep

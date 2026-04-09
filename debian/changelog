@@ -1,3 +1,13 @@
+krbtray (1.1.2) faye; urgency=medium
+
+  * Fix spurious "Kerberos Renewal Failed" notification after resuming from
+    sleep when tickets have expired but the renewal window has not yet closed.
+    The renewal step now skips expired tickets that will be handled by
+    auto-kinit, avoiding a confusing "Matching credential not found"
+    notification.
+
+ -- Edward Murrell <edward@murrell.co.nz>  Fri, 10 Apr 2026 00:00:00 +1100
+
 krbtray (1.1.1) faye; urgency=medium
 
   * Fix spurious "Kerberos Renewal Failed" notification after resuming from
