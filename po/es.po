@@ -58,6 +58,14 @@ msgstr "_Salir"
 msgid "Kerberos ticket management tray icon"
 msgstr "Icono de gestión de tickets Kerberos"
 
+msgid ""
+"Could not reach the Kerberos server to renew tickets for %s.\n"
+"Check your network connection and try again."
+msgstr ""
+"No se ha podido contactar con el servidor Kerberos para renovar los tickets "
+"de %s.\n"
+"Compruebe su conexión de red e inténtelo de nuevo."
+
 msgid "Renewal failed for %s:\n%s"
 msgstr "Error al renovar %s:\n%s"
 

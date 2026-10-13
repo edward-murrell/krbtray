@@ -65,3 +65,11 @@ krb5_error_code krbtray_krb_change_password (krb5_context  ctx,
 
 /* Human-readable time-remaining string, e.g. "3h 42m".  Caller frees. */
 gchar *krbtray_krb_time_remaining (time_t expiry);
+
+/*
+ * TRUE if the error means "the KDC could not be reached" rather than
+ * "the credentials were rejected".  Callers should retry such failures
+ * silently instead of alerting the user — they occur routinely when the
+ * network is not yet up (e.g. immediately after resuming from sleep).
+ */
+gboolean krbtray_krb_error_is_transient (krb5_error_code ret);

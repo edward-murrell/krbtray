@@ -74,6 +74,13 @@ msgstr ""
 
 #: src/tray.c
 #, c-format
+msgid ""
+"Could not reach the Kerberos server to renew tickets for %s.\n"
+"Check your network connection and try again."
+msgstr ""
+
+#: src/tray.c
+#, c-format
 msgid "Renewal failed for %s:\n%s"
 msgstr ""
 

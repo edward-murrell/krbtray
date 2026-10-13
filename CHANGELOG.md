@@ -2,6 +2,29 @@
 
 All notable changes to krbtray are documented here.
 
+## [1.1.3] – 2026-10-13
+
+- Fix "Cannot contact any KDC for requested realm" error after resuming from
+  sleep.  logind signals resume before the network has reconnected, so the
+  first renewal attempt always ran against a dead network.  Renewal and
+  auto-kinit are now deferred while the network is unavailable (watched via
+  `GNetworkMonitor`) and run as soon as connectivity returns; ticket state is
+  still re-read immediately so the tray icon stays accurate.  This also fixes
+  the same failure at login, when krbtray autostarts before the network is up.
+- Unreachable-KDC errors are no longer reported as renewal failures.  They are
+  distinguished from credential rejections by `krbtray_krb_error_is_transient()`
+  and retried silently; the manual "Renew Now" action shows "Could not reach
+  the Kerberos server … check your network connection" instead of raw Kerberos
+  text.
+- A genuine renewal failure now notifies once rather than on every check
+  interval.
+- No longer stalls the tray on Kerberos timeouts (up to tens of seconds) when
+  the network is down.
+- Fix translations never loading.  `include(GNUInstallDirs)` came after its
+  first use in `CMakeLists.txt`, so `LOCALEDIR` compiled to an empty string and
+  the `.mo` files were installed to the filesystem root (`/de/LC_MESSAGES/…`)
+  instead of `/usr/share/locale/`.  Affected every build, including packages.
+
 ## [1.1.2] – 2026-04-10
 
 - Fix spurious "Kerberos Renewal Failed" notification after resuming from sleep

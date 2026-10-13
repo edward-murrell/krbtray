@@ -54,7 +54,7 @@ sudo apt install \
 
 ```bash
 cmake -B build -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build --target package
-sudo dpkg -i build/krbtray-1.1.1-Linux.deb
+sudo dpkg -i build/krbtray-1.1.3-Linux.deb
 ```
 
 ### Manual build with CMake

@@ -1,10 +1,15 @@
 cmake_minimum_required(VERSION 3.16)
-project(krbtray VERSION 1.1.2 LANGUAGES C)
+project(krbtray VERSION 1.1.3 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 find_package(PkgConfig REQUIRED)
+
+# Must come before any use of CMAKE_INSTALL_*DIR — in particular the
+# LOCALEDIR compile definition and the .mo install rules below, which
+# silently resolve to empty paths if these variables are not yet defined.
+include(GNUInstallDirs)
 
 pkg_check_modules(GTK3       REQUIRED gtk+-3.0)
 pkg_check_modules(LIBSECRET  REQUIRED libsecret-1)
@@ -113,7 +118,7 @@ target_link_libraries(krbtray PRIVATE
 )
 
 # ── Install ──────────────────────────────────────────────────────────────────
-include(GNUInstallDirs)
+# GNUInstallDirs is included near the top, before its first use.
 
 install(TARGETS krbtray
     DESTINATION ${CMAKE_INSTALL_BINDIR})

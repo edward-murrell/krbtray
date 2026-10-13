@@ -2,6 +2,7 @@
 
 #include <string.h>
 #include <time.h>
+#include <errno.h>
 #include <glib/gi18n.h>
 
 /* ── Internal helpers ────────────────────────────────────────────────────── */
@@ -318,4 +319,36 @@ gchar *krbtray_krb_time_remaining(time_t expiry)
     if (hours > 0)
         return g_strdup_printf("%dh %dm", hours, mins);
     return g_strdup_printf("%dm", mins);
+}
+
+/* Distinguish "could not reach the KDC" from "the KDC rejected us".  Only the
+ * latter warrants telling the user; the former happens routinely whenever the
+ * network is down or not yet up, and simply needs retrying later.  Covers both
+ * the Kerberos-level codes and the socket/resolver errnos that Heimdal passes
+ * through unchanged. */
+gboolean krbtray_krb_error_is_transient(krb5_error_code ret)
+{
+    switch (ret) {
+    /* Kerberos-level: no KDC answered, or the realm could not be located. */
+    case KRB5_KDC_UNREACH:
+    case KRB5_REALM_CANT_RESOLVE:
+    case KRB5_REALM_UNKNOWN:
+#ifdef HEIM_ERR_NOHOST
+    /* Heimdal's mapping of EAI_NONAME / EAI_NODATA from getaddrinfo(). */
+    case HEIM_ERR_NOHOST:
+#endif
+    /* Resolver or socket layer failures surfaced as plain errnos. */
+    case EAGAIN:
+    case ETIMEDOUT:
+    case ECONNREFUSED:
+    case ECONNRESET:
+    case EHOSTUNREACH:
+    case EHOSTDOWN:
+    case ENETUNREACH:
+    case ENETDOWN:
+    case ENETRESET:
+        return TRUE;
+    default:
+        return FALSE;
+    }
 }

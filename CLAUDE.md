@@ -37,6 +37,18 @@ Wherever kinit is called and `KRB5KDC_ERR_KEY_EXPIRED` is returned, the Change P
 ### Power resume
 The application subscribes to the systemd-logind `org.freedesktop.login1.Manager.PrepareForSleep` D-Bus signal.  On resume (`going_to_sleep == FALSE`), `auto_kinit` is re-armed for all managed principals that have a stored password, and an immediate refresh is triggered.
 
+logind emits `PrepareForSleep(FALSE)` *before* NetworkManager has reconnected (delay inhibitors only apply to the going-to-sleep direction), so the refresh must never assume the network is up on resume.  See *Offline deferral* below.
+
+### Offline deferral
+`krbtray_app_refresh()` always performs the local steps (ccache scan, entry pruning, tray update), but the steps that contact the KDC — renewal (step 4) and auto-kinit (step 5) — are skipped while `g_network_monitor_get_network_available()` is false.  When skipped, `refresh_pending` is set and the refresh re-runs from the `GNetworkMonitor::network-changed` handler as soon as connectivity returns.
+
+A 60-second fallback timer (`OFFLINE_REFRESH_TIMEOUT_SECS`) forces the network steps regardless, so an absent or inaccurate network monitor can never permanently prevent renewals.  `app_refresh_internal(app, force_network)` is the internal entry point; `force_network = TRUE` is used only by that timer.
+
+### Transient vs. credential errors
+`krbtray_krb_error_is_transient()` (`kerberos.c`) distinguishes "could not reach the KDC" from "the KDC rejected us".  Transient errors (`KRB5_KDC_UNREACH`, `KRB5_REALM_CANT_RESOLVE`, `KRB5_REALM_UNKNOWN`, `HEIM_ERR_NOHOST`, and the socket/resolver errnos Heimdal passes through) must **never** raise a notification or error dialog — they are retried silently on a later refresh.  Any new call site that reports a Kerberos failure to the user must filter through this helper.
+
+Renewal failures that *are* genuine set `renewal_failure_notified` on the entry so the user is told once rather than on every check interval; a successful renewal or kinit clears it.
+
 ### Auto-kinit scope
 Step 5 of `krbtray_app_refresh` attempts auto-kinit when `needs_new_creds` is true, defined as:
 - the principal has no tickets at all, **or**

@@ -15,6 +15,9 @@
 
 #define DEFAULT_RENEWAL_THRESHOLD_MINS 30
 #define DEFAULT_CHECK_INTERVAL_SECS    60
+/* How long to wait for the network monitor to report connectivity before
+ * attempting KDC contact anyway (guards against an absent or wrong monitor). */
+#define OFFLINE_REFRESH_TIMEOUT_SECS   60
 #define CONFIG_GROUP_GENERAL           "General"
 #define CONFIG_GROUP_PRINCIPALS        "Principals"
 #define CONFIG_PREFIX_PRINCIPAL        "Principal "   /* + name */
@@ -217,10 +220,17 @@ void krbtray_app_restart_timer(KrbTrayApp *app)
 
 /* ── Core refresh loop ───────────────────────────────────────────────────── */
 
+static void app_arm_pending_refresh(KrbTrayApp *app);
+
 /* Central refresh cycle: re-reads all credential caches, attempts renewal
  * for expiring tickets, auto-kinits managed principals where possible,
- * then updates the tray icon to reflect the new state. */
-void krbtray_app_refresh(KrbTrayApp *app)
+ * then updates the tray icon to reflect the new state.
+ *
+ * Reading ccaches is purely local and always happens, so the tray stays
+ * accurate even offline.  The steps that contact the KDC are skipped while
+ * the network is down and re-armed for when it returns; force_network
+ * overrides that for the fallback timer. */
+static void app_refresh_internal(KrbTrayApp *app, gboolean force_network)
 {
     /* 1. Mark all entries as having no tickets so stale caches are cleared. */
     for (GList *l = app->entries; l; l = l->next) {
@@ -261,6 +271,18 @@ void krbtray_app_refresh(KrbTrayApp *app)
         }
     }
 
+    /* 3a. Everything below contacts the KDC.  If the network is not up —
+           the normal situation for a second or two after resuming from
+           sleep, and at login — skip it and retry when connectivity
+           returns, rather than stalling on Kerberos timeouts. */
+    gboolean online = force_network || !app->net_monitor ||
+        g_network_monitor_get_network_available(app->net_monitor);
+    if (!online) {
+        app_arm_pending_refresh(app);
+        krbtray_tray_update(app);
+        return;
+    }
+
     /* 4. For each entry: attempt renewal if needed. */
     for (GList *l = app->entries; l; l = l->next) {
         KrbPrincipalEntry *e = l->data;
@@ -280,11 +302,19 @@ void krbtray_app_refresh(KrbTrayApp *app)
             krb5_error_code ret =
                 krbtray_krb_renew(app->krb_ctx, e->principal_name);
             if (ret != 0) {
-                const char *msg =
-                    krb5_get_error_message(app->krb_ctx, ret);
-                krbtray_notify_renewal_failed(e->principal_name, msg);
-                krb5_free_error_message(app->krb_ctx, msg);
+                /* An unreachable KDC is not a credential problem — stay
+                 * quiet and let a later tick retry once the network is
+                 * back.  Report anything else once only. */
+                if (!krbtray_krb_error_is_transient(ret) &&
+                    !e->renewal_failure_notified) {
+                    const char *msg =
+                        krb5_get_error_message(app->krb_ctx, ret);
+                    krbtray_notify_renewal_failed(e->principal_name, msg);
+                    krb5_free_error_message(app->krb_ctx, msg);
+                    e->renewal_failure_notified = TRUE;
+                }
             } else {
+                e->renewal_failure_notified = FALSE;
                 /* Re-scan to pick up new expiry. */
                 KrbCacheInfo *ci =
                     krbtray_krb_get_cache_info(app->krb_ctx, e->principal_name);
@@ -330,6 +360,7 @@ void krbtray_app_refresh(KrbTrayApp *app)
         if (ret == 0) {
             /* Don't keep re-trying auto_kinit in subsequent timer ticks. */
             e->auto_kinit = FALSE;
+            e->renewal_failure_notified = FALSE;
             /* Re-scan this entry. */
             KrbCacheInfo *ci =
                 krbtray_krb_get_cache_info(app->krb_ctx, e->principal_name);
@@ -349,6 +380,75 @@ void krbtray_app_refresh(KrbTrayApp *app)
 
     /* 6. Update the tray icon and menu. */
     krbtray_tray_update(app);
+}
+
+/* Public refresh entry point: re-read ticket state and, when the network
+ * allows, renew or re-authenticate as needed. */
+void krbtray_app_refresh(KrbTrayApp *app)
+{
+    app_refresh_internal(app, FALSE);
+}
+
+/* ── Deferred refresh while offline ──────────────────────────────────────── */
+
+/* Fallback timer: contact the KDC regardless of what the network monitor
+ * reports, so a missing or inaccurate monitor cannot strand us offline
+ * indefinitely. */
+static gboolean on_offline_timeout(gpointer data)
+{
+    KrbTrayApp *app = data;
+    app->offline_timeout_id = 0;   /* removed by returning G_SOURCE_REMOVE */
+    if (app->refresh_pending) {
+        app->refresh_pending = FALSE;
+        app_refresh_internal(app, TRUE);
+    }
+    return G_SOURCE_REMOVE;
+}
+
+/* Note that a refresh wanted to reach the KDC but could not, and start the
+ * fallback timer if it is not already running. */
+static void app_arm_pending_refresh(KrbTrayApp *app)
+{
+    app->refresh_pending = TRUE;
+    if (app->offline_timeout_id == 0)
+        app->offline_timeout_id =
+            g_timeout_add_seconds(OFFLINE_REFRESH_TIMEOUT_SECS,
+                                  on_offline_timeout, app);
+}
+
+/* GNetworkMonitor handler: run a deferred refresh the moment connectivity
+ * returns, so credentials are renewed promptly after resume instead of
+ * waiting for the next periodic tick. */
+static void on_network_changed(GNetworkMonitor *monitor,
+                               gboolean         available,
+                               gpointer         data)
+{
+    (void)monitor;
+    KrbTrayApp *app = data;
+
+    if (!available || !app->refresh_pending)
+        return;
+
+    app->refresh_pending = FALSE;
+    if (app->offline_timeout_id > 0) {
+        g_source_remove(app->offline_timeout_id);
+        app->offline_timeout_id = 0;
+    }
+    krbtray_app_refresh(app);
+}
+
+/* Watch for connectivity changes so refreshes deferred while offline can be
+ * run as soon as the network is back. */
+static void krbtray_app_init_network_monitor(KrbTrayApp *app)
+{
+    /* GIO singleton — borrowed, not owned. */
+    app->net_monitor = g_network_monitor_get_default();
+    if (!app->net_monitor)
+        return;
+
+    app->net_changed_id =
+        g_signal_connect(app->net_monitor, "network-changed",
+                         G_CALLBACK(on_network_changed), app);
 }
 
 /* ── Authentication helper ───────────────────────────────────────────────── */
@@ -385,7 +485,9 @@ gboolean krbtray_app_authenticate(KrbTrayApp *app, const gchar *principal_name)
 
 /* D-Bus signal handler for org.freedesktop.login1.Manager.PrepareForSleep.
  * On resume (going_to_sleep == FALSE) re-arm auto-kinit for all managed
- * principals so expired credentials are refreshed immediately. */
+ * principals so expired credentials are refreshed.  logind signals resume
+ * before the network has reconnected, so the refresh itself defers any KDC
+ * contact until connectivity returns. */
 static void on_prepare_for_sleep(GDBusConnection *conn,
                                   const gchar     *sender,
                                   const gchar     *obj_path,
@@ -466,8 +568,9 @@ KrbTrayApp *krbtray_app_new(void)
     /* libnotify. */
     krbtray_notify_init();
 
-    /* Power-resume monitoring. */
+    /* Power-resume and connectivity monitoring. */
     krbtray_app_init_sleep_monitor(app);
+    krbtray_app_init_network_monitor(app);
 
     /* Tray icon. */
     krbtray_tray_create(app);
@@ -498,6 +601,10 @@ void krbtray_app_free(KrbTrayApp *app)
     if (!app) return;
     if (app->timer_id > 0)
         g_source_remove(app->timer_id);
+    if (app->offline_timeout_id > 0)
+        g_source_remove(app->offline_timeout_id);
+    if (app->net_changed_id && app->net_monitor)
+        g_signal_handler_disconnect(app->net_monitor, app->net_changed_id);
     if (app->sleep_signal_id && app->system_bus)
         g_dbus_connection_signal_unsubscribe(app->system_bus,
                                              app->sleep_signal_id);

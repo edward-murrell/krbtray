@@ -30,6 +30,11 @@ typedef struct {
     gboolean managed;        /* explicitly added by user in prefs    */
     gboolean store_password; /* password kept in the Secret Service  */
     gboolean auto_kinit;     /* kinit automatically using keyring    */
+
+    /* TRUE once a renewal failure has been reported, so a persistent
+     * failure notifies once rather than on every timer tick.  Cleared by
+     * any subsequent successful renewal or kinit. */
+    gboolean renewal_failure_notified;
 } KrbPrincipalEntry;
 
 /* ── Application context ─────────────────────────────────────────────────── */
@@ -58,6 +63,14 @@ typedef struct {
     /* Power-resume monitoring via logind D-Bus */
     GDBusConnection *system_bus;
     guint            sleep_signal_id;
+
+    /* Deferred refresh while the network is still down (see
+     * krbtray_app_refresh_when_online).  net_monitor is a GIO singleton and
+     * is not owned by us. */
+    GNetworkMonitor *net_monitor;
+    guint            net_changed_id;
+    guint            offline_timeout_id;
+    gboolean         refresh_pending;
 } KrbTrayApp;
 
 /* ── Lifecycle ───────────────────────────────────────────────────────────── */
@@ -66,7 +79,9 @@ KrbTrayApp *krbtray_app_new      (void);
 void        krbtray_app_run      (KrbTrayApp *app);
 void        krbtray_app_free     (KrbTrayApp *app);
 
-/* Triggered by timer and explicitly (e.g. after kinit/renew). */
+/* Triggered by timer and explicitly (e.g. after kinit/renew).  Ticket state
+ * is always re-read; renewals and auto-kinit are deferred while the network
+ * is unavailable and run as soon as it returns. */
 void        krbtray_app_refresh  (KrbTrayApp *app);
 
 /* Config persistence. */

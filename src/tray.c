@@ -65,13 +65,25 @@ static void on_menu_renew(GtkMenuItem *item, KrbTrayApp *app)
 
     krb5_error_code ret = krbtray_krb_renew(app->krb_ctx, name);
     if (ret != 0) {
-        const char *msg = krb5_get_error_message(app->krb_ctx, ret);
-        GtkWidget *dlg = gtk_message_dialog_new(
-            NULL, 0, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
-            _("Renewal failed for %s:\n%s"), name, msg);
+        /* Replace the raw Kerberos text for an unreachable KDC with plain
+         * English — the user needs to check their network, not their
+         * credentials. */
+        GtkWidget *dlg;
+        if (krbtray_krb_error_is_transient(ret)) {
+            dlg = gtk_message_dialog_new(
+                NULL, 0, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
+                _("Could not reach the Kerberos server to renew tickets "
+                  "for %s.\nCheck your network connection and try again."),
+                name);
+        } else {
+            const char *msg = krb5_get_error_message(app->krb_ctx, ret);
+            dlg = gtk_message_dialog_new(
+                NULL, 0, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
+                _("Renewal failed for %s:\n%s"), name, msg);
+            krb5_free_error_message(app->krb_ctx, msg);
+        }
         gtk_dialog_run(GTK_DIALOG(dlg));
         gtk_widget_destroy(dlg);
-        krb5_free_error_message(app->krb_ctx, msg);
     }
     krbtray_app_refresh(app);
 }
