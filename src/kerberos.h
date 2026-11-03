@@ -6,6 +6,16 @@
 
 #include "app.h"   /* for KrbState */
 
+#if !defined(KRBTRAY_HEIMDAL) && !defined(KRBTRAY_MIT)
+#error "Define KRBTRAY_HEIMDAL or KRBTRAY_MIT (CMakeLists.txt does this)"
+#endif
+
+/* Heimdal and MIT spell the "password has expired" KDC error differently;
+ * the sources use the Heimdal name throughout. */
+#if defined(KRBTRAY_MIT) && !defined(KRB5KDC_ERR_KEY_EXPIRED)
+#define KRB5KDC_ERR_KEY_EXPIRED KRB5KDC_ERR_KEY_EXP
+#endif
+
 /*
  * Summary of one TGT found in a credential cache.
  * Caller is responsible for freeing principal_name with g_free().
@@ -73,3 +83,11 @@ gchar *krbtray_krb_time_remaining (time_t expiry);
  * network is not yet up (e.g. immediately after resuming from sleep).
  */
 gboolean krbtray_krb_error_is_transient (krb5_error_code ret);
+
+/*
+ * TRUE if the error means the password supplied to kinit was wrong.
+ * MIT reports a wrong password as an integrity failure when the principal
+ * does not require pre-authentication, so callers should not compare
+ * against KRB5KDC_ERR_PREAUTH_FAILED alone.
+ */
+gboolean krbtray_krb_error_is_bad_password (krb5_error_code ret);

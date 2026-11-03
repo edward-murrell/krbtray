@@ -15,27 +15,41 @@ pkg_check_modules(GTK3       REQUIRED gtk+-3.0)
 pkg_check_modules(LIBSECRET  REQUIRED libsecret-1)
 pkg_check_modules(LIBNOTIFY  REQUIRED libnotify)
 
-# Heimdal Kerberos.
-# On Debian/Ubuntu/Mint:  apt install heimdal-dev libnotify-dev libsecret-1-dev
+# Kerberos: Heimdal (Debian/Ubuntu/Mint) or MIT (Fedora/RHEL).
+#   Debian/Ubuntu/Mint:  apt install heimdal-dev libnotify-dev libsecret-1-dev
+#   Fedora/RHEL:         dnf install krb5-devel libnotify-devel libsecret-devel
 #
 # Prefer the Heimdal-specific pkg-config name so we don't accidentally pick up
-# MIT krb5 when both are installed (heimdal-multidev provides mit-krb5 too).
-pkg_check_modules(HEIMDAL heimdal-krb5)
-if(NOT HEIMDAL_FOUND)
-    # Fall back to the generic krb5-config helper.
+# MIT krb5 when both are installed (heimdal-multidev provides krb5.pc too).
+# Exactly one of KRBTRAY_HEIMDAL / KRBTRAY_MIT is defined for the sources.
+pkg_check_modules(KRB5 heimdal-krb5)
+if(KRB5_FOUND)
+    set(KRBTRAY_KRB5_IMPL HEIMDAL)
+else()
+    # Fall back to the krb5-config helper, which both implementations ship,
+    # and ask it which one it belongs to.
     find_program(KRB5_CONFIG NAMES krb5-config heimdal-krb5-config REQUIRED)
     execute_process(
+        COMMAND ${KRB5_CONFIG} --vendor
+        OUTPUT_VARIABLE KRB5_VENDOR
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(KRB5_VENDOR MATCHES "Heimdal")
+        set(KRBTRAY_KRB5_IMPL HEIMDAL)
+    else()
+        set(KRBTRAY_KRB5_IMPL MIT)
+    endif()
+    execute_process(
         COMMAND ${KRB5_CONFIG} --libs krb5
-        OUTPUT_VARIABLE HEIMDAL_LINK_LIBRARIES
+        OUTPUT_VARIABLE KRB5_LINK_LIBRARIES
         OUTPUT_STRIP_TRAILING_WHITESPACE)
     execute_process(
-        COMMAND ${KRB5_CONFIG} --cflags
-        OUTPUT_VARIABLE HEIMDAL_CFLAGS_OTHER
+        COMMAND ${KRB5_CONFIG} --cflags krb5
+        OUTPUT_VARIABLE KRB5_CFLAGS_OTHER
         OUTPUT_STRIP_TRAILING_WHITESPACE)
-    separate_arguments(HEIMDAL_LINK_LIBRARIES UNIX_COMMAND "${HEIMDAL_LINK_LIBRARIES}")
-    separate_arguments(HEIMDAL_CFLAGS_OTHER   UNIX_COMMAND "${HEIMDAL_CFLAGS_OTHER}")
-    set(HEIMDAL_FOUND TRUE)
+    separate_arguments(KRB5_LINK_LIBRARIES UNIX_COMMAND "${KRB5_LINK_LIBRARIES}")
+    separate_arguments(KRB5_CFLAGS_OTHER   UNIX_COMMAND "${KRB5_CFLAGS_OTHER}")
 endif()
+message(STATUS "Kerberos implementation: ${KRBTRAY_KRB5_IMPL}")
 
 set(SOURCES
     src/main.c
@@ -63,6 +77,7 @@ add_compile_definitions(
     GETTEXT_PACKAGE="${GETTEXT_PACKAGE}"
     LOCALEDIR="${CMAKE_INSTALL_FULL_LOCALEDIR}"
     KRBTRAY_VERSION="${CMAKE_PROJECT_VERSION}"
+    KRBTRAY_${KRBTRAY_KRB5_IMPL}
 )
 
 set(LANGUAGES en_US es fr de)
@@ -91,14 +106,14 @@ target_include_directories(krbtray PRIVATE
     ${GTK3_INCLUDE_DIRS}
     ${LIBSECRET_INCLUDE_DIRS}
     ${LIBNOTIFY_INCLUDE_DIRS}
-    ${HEIMDAL_INCLUDE_DIRS}
+    ${KRB5_INCLUDE_DIRS}
 )
 
 target_compile_options(krbtray PRIVATE
     ${GTK3_CFLAGS_OTHER}
     ${LIBSECRET_CFLAGS_OTHER}
     ${LIBNOTIFY_CFLAGS_OTHER}
-    ${HEIMDAL_CFLAGS_OTHER}
+    ${KRB5_CFLAGS_OTHER}
     -Wall -Wextra -Wno-deprecated-declarations
 )
 
@@ -106,15 +121,15 @@ target_link_directories(krbtray PRIVATE
     ${GTK3_LIBRARY_DIRS}
     ${LIBSECRET_LIBRARY_DIRS}
     ${LIBNOTIFY_LIBRARY_DIRS}
-    ${HEIMDAL_LIBRARY_DIRS}
+    ${KRB5_LIBRARY_DIRS}
 )
 
 target_link_libraries(krbtray PRIVATE
     ${GTK3_LIBRARIES}
     ${LIBSECRET_LIBRARIES}
     ${LIBNOTIFY_LIBRARIES}
-    ${HEIMDAL_LIBRARIES}
-    ${HEIMDAL_LINK_LIBRARIES}
+    ${KRB5_LIBRARIES}
+    ${KRB5_LINK_LIBRARIES}
 )
 
 # ── Install ──────────────────────────────────────────────────────────────────
@@ -130,12 +145,3 @@ configure_file(
     @ONLY)
 install(FILES ${CMAKE_BINARY_DIR}/krbtray.desktop
     DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
-
-# ── Debian package (CPack) ───────────────────────────────────────────────────
-set(CPACK_GENERATOR "DEB")
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Edward Murrell <edward@murrell.co.nz>")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Kerberos ticket management tray icon")
-set(CPACK_DEBIAN_PACKAGE_SECTION "net")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS
-    "libgtk-3-0, libsecret-1-0, libnotify4, libkrb5-26-heimdal")
-include(CPack)

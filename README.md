@@ -1,6 +1,6 @@
 # krbtray
 
-A GTK3 system tray application for Kerberos ticket management on Linux Mint / Cinnamon (and other GTK environments using `GtkStatusIcon`, such as XFCE and MATE).
+A GTK3 system tray application for Kerberos ticket management on Linux Mint / Cinnamon (and other desktops that show `GtkStatusIcon`, such as XFCE and MATE — see [Desktop compatibility](#desktop-compatibility)).
 
 krbtray sits in your system tray, monitors the state of all Kerberos TGTs in your credential cache collection, automatically renews tickets before they expire, and optionally stores your Kerberos password in the system keyring so it can re-authenticate for you.
 
@@ -20,22 +20,43 @@ krbtray sits in your system tray, monitors the state of all Kerberos TGTs in you
 - Auto-renewal: renews any renewable TGT a configurable number of minutes before expiry; sends a desktop notification if renewal fails
 - Password storage via the system Secret Service (GNOME Keyring / KWallet through libsecret)
 - Auto-kinit on startup using a stored password
-- Multi-principal support via the Heimdal credential cache collection (`KCM:` or `DIR:` recommended)
+- Multi-principal support via the credential cache collection (`KCM:`, `DIR:` or, on MIT, `KEYRING:`)
+- Works with Heimdal (Debian, Ubuntu, Mint) and MIT Kerberos (Fedora, RHEL and derivatives)
 - Preferences dialog: renewal threshold, check interval, autostart toggle, principal management
 - Autostart via XDG `~/.config/autostart/` (standard for Cinnamon and most desktop environments)
 
-## Dependencies
+## Installing
 
-### Runtime
+Packages for Ubuntu 22.04 / 24.04 (Mint 21 / 22), Debian 12 / 13 (LMDE 6 / 7), EL 9, EL 10 (RHEL, AlmaLinux, Rocky) and Fedora, on amd64 and arm64, are published in a signed package repository.  Add the repository once:
 
-| Library | Package (Debian/Ubuntu/Mint) |
+```bash
+curl -fsSL https://edward-murrell.github.io/packages/setup.sh | sudo sh
+```
+
+then install:
+
+```bash
+sudo apt install krbtray     # Debian, Ubuntu, Mint
+sudo dnf install krbtray     # Fedora, RHEL, AlmaLinux, Rocky
+```
+
+## Desktop compatibility
+
+krbtray uses `GtkStatusIcon`, an XEmbed (X11) system tray icon.  Whether you see it depends on the desktop:
+
+| Desktop | Icon shown? |
 |---|---|
-| GTK 3 | `libgtk-3-0` |
-| Heimdal Kerberos | `libkrb5-26-heimdal` |
-| libsecret | `libsecret-1-0` |
-| libnotify | `libnotify4` |
+| Cinnamon, MATE, XFCE, LXQt | Yes |
+| KDE Plasma | Yes on X11; on Wayland start krbtray with `GDK_BACKEND=x11` |
+| GNOME (default on Fedora and RHEL) | Only with the [AppIndicator and KStatusNotifierItem Support](https://extensions.gnome.org/extension/615/appindicator-support/) extension, and on Wayland only with `GDK_BACKEND=x11` |
 
-### Build
+On Wayland, GTK 3 does not support `GtkStatusIcon` at all, so krbtray must run through XWayland (`GDK_BACKEND=x11 krbtray`) for the icon to appear.
+
+## Building from source
+
+### Dependencies
+
+Debian / Ubuntu / Mint (Heimdal Kerberos):
 
 ```bash
 sudo apt install \
@@ -48,16 +69,23 @@ sudo apt install \
     libnotify-dev
 ```
 
-## Building
-
-### Debian package (recommended)
+Fedora / RHEL (MIT Kerberos; on EL enable CRB and EPEL first):
 
 ```bash
-cmake -B build -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build --target package
-sudo dpkg -i build/krbtray-1.1.3-Linux.deb
+sudo dnf install \
+    cmake \
+    gcc \
+    make \
+    gettext \
+    gtk3-devel \
+    krb5-devel \
+    libsecret-devel \
+    libnotify-devel
 ```
 
-### Manual build with CMake
+CMake prefers Heimdal's `heimdal-krb5` pkg-config module and falls back to `krb5-config` otherwise; the configure step prints which implementation it found (`-- Kerberos implementation: HEIMDAL` or `MIT`).
+
+### Build with CMake
 
 ```bash
 cmake -B build -DCMAKE_BUILD_TYPE=Release
@@ -75,6 +103,17 @@ Or run directly from the build directory:
 ```bash
 ./build/krbtray
 ```
+
+### Building packages
+
+Packages are built natively on the release they target, as root inside a clean container of that release, from the repository root:
+
+```bash
+packaging/build-deb.sh 1.1.3   # uses debian/; output out/krbtray_1.1.3+<codename>_<arch>.deb
+packaging/build-rpm.sh 1.1.3   # uses packaging/krbtray.spec; output out/krbtray-1.1.3-1.<dist>.<arch>.rpm
+```
+
+For example: `docker run --rm -v "$PWD":/src -w /src debian:13 packaging/build-deb.sh 1.1.3`.  The `Release` GitHub workflow does this for every supported release and architecture when a version tag is pushed.
 
 ## Configuration
 
@@ -101,10 +140,10 @@ auto_kinit     = true
 
 ## Multi-principal support
 
-Heimdal's `krb5_cccol_cursor` API is used to iterate over all credential caches in the collection. For this to see more than one principal you need a collection-aware ccache type:
+The `krb5_cccol_cursor` API is used to iterate over all credential caches in the collection. For this to see more than one principal you need a collection-aware ccache type:
 
 ```bash
-# KCM daemon (recommended — ships with Heimdal):
+# KCM daemon (recommended — ships with Heimdal; sssd-kcm on Fedora/RHEL):
 export KRB5CCNAME=KCM:
 
 # Or directory-based:
@@ -112,6 +151,8 @@ export KRB5CCNAME=DIR:~/.cache/krb5/
 ```
 
 Add the appropriate `KRB5CCNAME` export to `~/.profile` or `/etc/environment` so the setting persists across sessions.
+
+Fedora and RHEL already default to `KCM:` (via sssd-kcm), or `KEYRING:persistent:` on some RHEL configurations, so no change is needed there.
 
 With the default `FILE:` cache only the single default cache is visible, which limits you to one principal.
 
@@ -142,7 +183,6 @@ rm ~/.config/autostart/krbtray.desktop
 ## Roadmap
 
 - **GTK4 port** — a GTK4 version using `GtkSystemTray` / `libayatana-appindicator` is coming soon.
-- **Debian repository** — install from apt-get.
 
 ## Credits
 

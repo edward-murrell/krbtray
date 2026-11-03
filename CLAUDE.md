@@ -61,11 +61,20 @@ Step 5 of `krbtray_app_refresh` attempts auto-kinit when `needs_new_creds` is tr
 
 `passwd_dialog.c` must be listed in the `SOURCES` set in `CMakeLists.txt`.
 
+### Heimdal and MIT Kerberos
+The code builds against both.  CMake defines exactly one of `KRBTRAY_HEIMDAL` (Debian/Ubuntu/Mint) or `KRBTRAY_MIT` (Fedora/RHEL); `kerberos.h` refuses to compile without one.  Keep implementation-specific code inside `kerberos.c` behind those macros, and keep Heimdal behaviour unchanged when adding MIT-only fixes.  Known differences:
+- Ticket flags: Heimdal `creds.flags.b.renewable`, MIT `creds.ticket_flags & TKT_FLG_RENEWABLE`.
+- `KRB5KDC_ERR_KEY_EXPIRED` is Heimdal's name; `kerberos.h` maps it to MIT's `KRB5KDC_ERR_KEY_EXP`.  Use the Heimdal name in sources.
+- `krb5_data_zero` / `krb5_data_free` are Heimdal-only; MIT uses `krb5_free_data_contents`.
+- Wrong-password detection goes through `krbtray_krb_error_is_bad_password()`; MIT also reports it as `KRB5KRB_AP_ERR_BAD_INTEGRITY`.
+- On MIT, kinit for a principal with no cache creates a new cache in the collection (`krb5_cc_new_unique`) instead of overwriting the primary cache.
+
 ## Build system notes
 - Requires `gettext` (provides `msgfmt`) in addition to the existing dependencies.  Already listed in `debian/control` Build-Depends.
 - `GETTEXT_PACKAGE` is defined as `"krbtray"`; `LOCALEDIR` resolves to `CMAKE_INSTALL_FULL_LOCALEDIR` at compile time.
 - `KRBTRAY_VERSION` is defined from `CMAKE_PROJECT_VERSION` at compile time; the About dialog reads this value.  The `project(VERSION ...)` line in `CMakeLists.txt` is the single source of truth for the version number.
-- CPack is configured to produce `.deb` packages via `cmake --build build --target package`.
+- Packages are built natively per target release: `.deb` from `debian/` via `packaging/build-deb.sh`, `.rpm` from `packaging/krbtray.spec` via `packaging/build-rpm.sh`.  There is no CPack configuration — don't reintroduce one (hand-written dependency lists break on the `t64` library renames).  `.github/workflows/release.yml` builds and install-tests every target on amd64 and arm64 and publishes to the central `edward-murrell/packages` repository; the git tag must equal the `project(VERSION ...)` number.
+- Version contract with the central repo: `.deb` versions are `<upstream>+<codename>` (added by `build-deb.sh`), `.rpm` uses `Release: 1%{?dist}`.  Never upload `-dbgsym` / `-debuginfo` / source packages.
 - GIO (`<gio/gio.h>`) is used for D-Bus (power-resume monitoring); it is a transitive dependency of GTK3 and requires no extra `pkg_check_modules` entry.
 
 ## Documentation

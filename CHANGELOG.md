@@ -24,6 +24,15 @@ All notable changes to krbtray are documented here.
   first use in `CMakeLists.txt`, so `LOCALEDIR` compiled to an empty string and
   the `.mo` files were installed to the filesystem root (`/de/LC_MESSAGES/…`)
   instead of `/usr/share/locale/`.  Affected every build, including packages.
+- Build against MIT Kerberos as well as Heimdal, and ship `.rpm` packages for
+  EL 9, EL 10 and Fedora.  On MIT, a new principal on a collection ccache
+  (`KCM:`, `KEYRING:`, `DIR:`) gets its own cache rather than overwriting the
+  primary one, and password-policy rejections (including Active Directory's)
+  are shown as readable text.
+- Native `.deb` packages for Ubuntu 22.04 / 24.04 and Debian 12 / 13, with
+  correct per-release library dependencies (the CPack-built `.deb` depended on
+  `libkrb5-26-heimdal`, which doesn't exist on Ubuntu 24.04 or Debian 13).
+  Installable from the krbtray package repository.
 
 ## [1.1.2] – 2026-04-10
 

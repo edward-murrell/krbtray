@@ -1,7 +1,7 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: krbtray
 Upstream-Contact: Edward Murrell <edward@murrell.co.nz>
-Source: https://github.com/edwardmurrell/krbtray
+Source: https://github.com/edward-murrell/krbtray
 
 Files: *
 Copyright: 2026 Edward Murrell <edward@murrell.co.nz>

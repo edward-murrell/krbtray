@@ -12,7 +12,7 @@ Build-Depends:
  libsecret-1-dev,
  libnotify-dev,
 Standards-Version: 4.7.0
-Homepage: https://github.com/edwardmurrell/krbtray
+Homepage: https://github.com/edward-murrell/krbtray
 Rules-Requires-Root: no
 
 Package: krbtray

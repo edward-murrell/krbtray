@@ -57,7 +57,12 @@ static KrbCacheInfo *cache_info_from_ccache(krb5_context ctx,
             info->principal_name = g_strdup(principal_name);
             info->expiry         = (time_t)creds.times.endtime;
             info->renew_till     = (time_t)creds.times.renew_till;
+#ifdef KRBTRAY_MIT
+            info->renewable      =
+                (creds.ticket_flags & TKT_FLG_RENEWABLE) != 0;
+#else
             info->renewable      = (gboolean)creds.flags.b.renewable;
+#endif
             krb5_free_cred_contents(ctx, &creds);
             break;
         }
@@ -67,6 +72,35 @@ static KrbCacheInfo *cache_info_from_ccache(krb5_context ctx,
     free(principal_name);
     return info;
 }
+
+#ifdef KRBTRAY_MIT
+/* Choose a ccache for a principal that has none yet.  On collection types
+ * (KCM:, KEYRING:, DIR: — Fedora and RHEL default to KCM: via sssd-kcm) the
+ * default cache is the collection's primary one, which may already belong to
+ * another principal; MIT's kinit creates a fresh cache in the collection in
+ * that case rather than overwriting it, and so do we. */
+static krb5_error_code mit_new_ccache(krb5_context ctx, krb5_ccache *out)
+{
+    krb5_ccache     def = NULL;
+    krb5_principal  existing = NULL;
+    krb5_error_code ret;
+
+    ret = krb5_cc_default(ctx, &def);
+    if (ret) return ret;
+
+    /* An empty primary cache, or a type with only one cache, is used as is. */
+    if (!krb5_cc_support_switch(ctx, krb5_cc_get_type(ctx, def)) ||
+        krb5_cc_get_principal(ctx, def, &existing) != 0) {
+        *out = def;
+        return 0;
+    }
+    krb5_free_principal(ctx, existing);
+
+    ret = krb5_cc_new_unique(ctx, krb5_cc_get_type(ctx, def), NULL, out);
+    krb5_cc_close(ctx, def);
+    return ret;
+}
+#endif
 
 /* ── Public API ──────────────────────────────────────────────────────────── */
 
@@ -196,7 +230,11 @@ krb5_error_code krbtray_krb_kinit(krb5_context  ctx,
 
     /* Find or create the ccache for this principal. */
     if (krb5_cc_cache_match(ctx, principal, &ccache) != 0) {
+#ifdef KRBTRAY_MIT
+        ret = mit_new_ccache(ctx, &ccache);
+#else
         ret = krb5_cc_default(ctx, &ccache);
+#endif
         if (ret) goto out_creds;
     }
 
@@ -252,8 +290,8 @@ krb5_error_code krbtray_krb_change_password(krb5_context  ctx,
     krb5_data                result_code_string, result_string;
 
     memset(&creds, 0, sizeof(creds));
-    krb5_data_zero(&result_code_string);
-    krb5_data_zero(&result_string);
+    memset(&result_code_string, 0, sizeof(result_code_string));
+    memset(&result_string, 0, sizeof(result_string));
 
     ret = krb5_parse_name(ctx, principal_name, &principal);
     if (ret) return ret;
@@ -277,6 +315,15 @@ krb5_error_code krbtray_krb_change_password(krb5_context  ctx,
     /* A zero return but non-zero result_code means the KDC rejected the
      * new password (e.g. quality policy).  Surface the reason string. */
     if (ret == 0 && result_code != 0) {
+#ifdef KRBTRAY_MIT
+        /* MIT can decode the server's reply, including Active Directory's
+         * binary password-policy blob, into a readable sentence. */
+        char *reason = NULL;
+        if (krb5_chpw_message(ctx, &result_string, &reason) == 0 && reason) {
+            krb5_set_error_message(ctx, KRB5KDC_ERR_POLICY, "%s", reason);
+            krb5_free_string(ctx, reason);
+        } else
+#endif
         if (result_string.length > 0) {
             krb5_set_error_message(ctx, KRB5KDC_ERR_POLICY,
                                    "%.*s",
@@ -290,8 +337,13 @@ krb5_error_code krbtray_krb_change_password(krb5_context  ctx,
         ret = KRB5KDC_ERR_POLICY;
     }
 
+#ifdef KRBTRAY_MIT
+    krb5_free_data_contents(ctx, &result_code_string);
+    krb5_free_data_contents(ctx, &result_string);
+#else
     krb5_data_free(&result_code_string);
     krb5_data_free(&result_string);
+#endif
     krb5_free_cred_contents(ctx, &creds);
 out_opt:
     krb5_get_init_creds_opt_free(ctx, opt);
@@ -347,6 +399,25 @@ gboolean krbtray_krb_error_is_transient(krb5_error_code ret)
     case ENETUNREACH:
     case ENETDOWN:
     case ENETRESET:
+        return TRUE;
+    default:
+        return FALSE;
+    }
+}
+
+/* Recognise "the password was wrong" however the implementation reports it.
+ * An unknown principal is included because, to the user, a mistyped
+ * principal and a mistyped password look the same. */
+gboolean krbtray_krb_error_is_bad_password(krb5_error_code ret)
+{
+    switch (ret) {
+    case KRB5KDC_ERR_PREAUTH_FAILED:
+    case KRB5KDC_ERR_C_PRINCIPAL_UNKNOWN:
+#ifdef KRBTRAY_MIT
+    /* MIT: the AS-REP could not be decrypted with the supplied password
+     * (principal without the requires_preauth flag). */
+    case KRB5KRB_AP_ERR_BAD_INTEGRITY:
+#endif
         return TRUE;
     default:
         return FALSE;

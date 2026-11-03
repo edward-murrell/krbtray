@@ -32,3 +32,6 @@ debian/*.substvars
 
 # Generated desktop file
 data/krbtray.desktop
+
+# Native package build output (packaging/build-*.sh)
+out/

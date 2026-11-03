@@ -71,8 +71,7 @@ static void on_change_clicked(GtkButton *btn, PasswdDialogData *d)
         const char *msg;
         gboolean free_msg = FALSE;
 
-        if (ret == KRB5KDC_ERR_PREAUTH_FAILED ||
-            ret == KRB5KDC_ERR_C_PRINCIPAL_UNKNOWN) {
+        if (krbtray_krb_error_is_bad_password(ret)) {
             msg = _("Current password is incorrect.");
         } else {
             msg = krb5_get_error_message(d->app->krb_ctx, ret);
