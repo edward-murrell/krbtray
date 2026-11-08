@@ -292,13 +292,10 @@ static void app_refresh_internal(KrbTrayApp *app, gboolean force_network)
          * a long suspend).  Step 5 will auto-kinit instead. */
         if (e->renew_till > 0 && time(NULL) >= e->renew_till)
             continue;
-        /* Skip renewal for expired tickets when auto-kinit will handle
-         * them in step 5 — avoids a spurious "renewal failed" notification
-         * on resume from sleep. */
-        if (e->state == KRB_STATE_EXPIRED &&
-            e->managed && e->auto_kinit && e->store_password)
-            continue;
-        if (e->state == KRB_STATE_EXPIRING || e->state == KRB_STATE_EXPIRED) {
+        /* Only tickets still inside their lifetime can be renewed.  The KDC
+         * refuses to renew a ticket past its endtime, so expired tickets
+         * are left to auto-kinit in step 5 or to the user. */
+        if (e->state == KRB_STATE_EXPIRING) {
             krb5_error_code ret =
                 krbtray_krb_renew(app->krb_ctx, e->principal_name);
             if (ret != 0) {
@@ -354,7 +351,18 @@ static void app_refresh_internal(KrbTrayApp *app, gboolean force_network)
              * continuing.  Disable auto-kinit so we don't loop. */
             e->auto_kinit = FALSE;
             krbtray_passwd_dialog_run(app, e->principal_name, TRUE);
-            continue;
+            /* The dialog refreshes on success, which can rebuild the entry
+             * list under us.  Leave the rest to the next refresh. */
+            break;
+        }
+
+        if (krbtray_krb_error_is_bad_password(ret)) {
+            /* The stored password is wrong, most likely changed elsewhere.
+             * Stop retrying it and ask the user for the current one.  A
+             * successful dialog replaces the stored password. */
+            e->auto_kinit = FALSE;
+            krbtray_kinit_dialog_run(app, e->principal_name);
+            break;
         }
 
         if (ret == 0) {

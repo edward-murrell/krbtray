@@ -2,6 +2,18 @@
 
 All notable changes to krbtray are documented here.
 
+## [1.1.4] – 2026-11-08
+
+- Stop trying to renew tickets that have already expired.  The KDC never
+  renews a ticket past its end time, so the attempt always failed and raised a
+  "Matching credential not found" notification.  Expired tickets are now left
+  to auto-kinit or shown as expired in the tray.
+- When auto-kinit fails because the stored password is wrong, stop retrying it
+  every minute in silence.  Auto-kinit is turned off and the Authenticate
+  dialog opens so the current password can be entered.
+- Fix a possible crash when a dialog opened during auto-kinit refreshed the
+  principal list while it was still being processed.
+
 ## [1.1.3] – 2026-10-13
 
 - Fix "Cannot contact any KDC for requested realm" error after resuming from

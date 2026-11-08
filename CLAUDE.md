@@ -49,10 +49,17 @@ A 60-second fallback timer (`OFFLINE_REFRESH_TIMEOUT_SECS`) forces the network s
 
 Renewal failures that *are* genuine set `renewal_failure_notified` on the entry so the user is told once rather than on every check interval; a successful renewal or kinit clears it.
 
+### Renewal scope
+Step 4 renews only tickets in `KRB_STATE_EXPIRING`.  The KDC refuses to renew a ticket past its endtime, so `KRB_STATE_EXPIRED` tickets are never sent for renewal.  They are handled by auto-kinit in step 5, or left for the user to re-authenticate.
+
 ### Auto-kinit scope
 Step 5 of `krbtray_app_refresh` attempts auto-kinit when `needs_new_creds` is true, defined as:
 - the principal has no tickets at all, **or**
 - the principal has tickets but they are in `KRB_STATE_EXPIRED` (expired and no longer renewable).
+
+If auto-kinit fails because the stored password is wrong (`krbtray_krb_error_is_bad_password()`), `auto_kinit` is cleared and the kinit dialog opens so the user can enter the current password.
+
+Both dialogs opened from step 5 call `krbtray_app_refresh()` on success, which can rebuild the entry list.  Step 5 must stop iterating after opening either dialog.
 
 ### New source files
 | File | Purpose |
