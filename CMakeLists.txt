@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(krbtray VERSION 1.1.4 LANGUAGES C)
+project(krbtray VERSION 1.2.0 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)

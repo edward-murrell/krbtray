@@ -2,6 +2,21 @@
 
 All notable changes to krbtray are documented here.
 
+## [1.2.0] – 2026-11-14
+
+- Keep several principals signed in at once.  With the default `FILE:` cache,
+  krbtray now keeps a cache per principal in `$XDG_RUNTIME_DIR/krbtray` and
+  copies the default one into the default cache that `ssh`, `smbclient` and
+  other programs use.  Collection caches such as `KCM:` are used directly.
+- New **Make Default** menu item chooses which principal other programs use.
+  The menu and tooltip mark the default when two or more principals have
+  tickets.
+- Signing in a second principal no longer replaces the first.
+- Fix a crash with Heimdal `DIR:` caches, whose collection support is broken
+  in Heimdal 7.
+- The README explains the GNOME Online Accounts notification seen when
+  switching principals, and how to turn it off.
+
 ## [1.1.4] – 2026-11-08
 
 - Stop trying to renew tickets that have already expired.  The KDC never
