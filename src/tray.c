@@ -106,6 +106,37 @@ static void on_menu_destroy(GtkMenuItem *item, KrbTrayApp *app)
     }
 }
 
+/* Menu handler: make the selected principal the one that ssh, smbclient and
+ * other programs use, while keeping every other principal signed in. */
+static void on_menu_make_default(GtkMenuItem *item, KrbTrayApp *app)
+{
+    const gchar *name = g_object_get_data(G_OBJECT(item), PRINCIPAL_KEY);
+    if (!name) return;
+
+    krb5_error_code ret = krbtray_krb_make_default(app->krb_ctx, name);
+    if (ret != 0) {
+        const char *msg = krb5_get_error_message(app->krb_ctx, ret);
+        GtkWidget *dlg = gtk_message_dialog_new(
+            NULL, 0, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
+            _("Could not make %s the default:\n%s"), name, msg);
+        krb5_free_error_message(app->krb_ctx, msg);
+        gtk_dialog_run(GTK_DIALOG(dlg));
+        gtk_widget_destroy(dlg);
+    }
+    krbtray_app_refresh(app);
+}
+
+/* Count principals that currently hold tickets.  The default marker and
+ * "Make Default" only mean something when there are two or more. */
+static guint count_with_tickets(KrbTrayApp *app)
+{
+    guint n = 0;
+    for (GList *l = app->entries; l; l = l->next)
+        if (((KrbPrincipalEntry *)l->data)->has_tickets)
+            n++;
+    return n;
+}
+
 /* Menu handler: authenticate the selected principal, using a stored password
  * silently where available, otherwise prompting with the kinit dialog. */
 static void on_menu_authenticate(GtkMenuItem *item, KrbTrayApp *app)
@@ -193,15 +224,23 @@ static GtkWidget *build_menu(KrbTrayApp *app)
                               gtk_separator_menu_item_new());
     }
 
+    gboolean several = count_with_tickets(app) > 1;
+
     /* One section per principal. */
     for (GList *l = app->entries; l; l = l->next) {
         KrbPrincipalEntry *e = l->data;
 
         /* Principal header with status. */
         gchar *time_str = krbtray_krb_time_remaining(e->expiry);
-        gchar *header   = e->has_tickets
-            ? g_strdup_printf("%s  (%s)", e->principal_name, time_str)
-            : g_strdup_printf("%s  (%s)", e->principal_name, _("no tickets"));
+        gchar *header;
+        if (!e->has_tickets)
+            header = g_strdup_printf("%s  (%s)", e->principal_name,
+                                     _("no tickets"));
+        else if (several && e->is_default)
+            header = g_strdup_printf(_("%s  (%s, default)"),
+                                     e->principal_name, time_str);
+        else
+            header = g_strdup_printf("%s  (%s)", e->principal_name, time_str);
         g_free(time_str);
 
         GtkWidget *hdr_item = gtk_menu_item_new();
@@ -216,6 +255,12 @@ static GtkWidget *build_menu(KrbTrayApp *app)
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), hdr_item);
 
         /* Actions. */
+        if (e->has_tickets && several && !e->is_default) {
+            GtkWidget *make_default =
+                principal_item(_("  Make Default"), e->principal_name,
+                               G_CALLBACK(on_menu_make_default), app);
+            gtk_menu_shell_append(GTK_MENU_SHELL(menu), make_default);
+        }
         if (e->has_tickets) {
             if (e->renewable) {
                 GtkWidget *renew =
@@ -329,11 +374,16 @@ void krbtray_tray_update(KrbTrayApp *app)
     if (app->entries == NULL) {
         g_string_append(tip, _("  (none)"));
     } else {
+        gboolean several = count_with_tickets(app) > 1;
         for (GList *l = app->entries; l; l = l->next) {
             KrbPrincipalEntry *e = l->data;
             gchar *rem = krbtray_krb_time_remaining(e->expiry);
-            g_string_append_printf(tip, "  %s – %s\n",
-                                   e->principal_name, rem);
+            if (several && e->is_default)
+                g_string_append_printf(tip, _("  %s – %s (default)\n"),
+                                       e->principal_name, rem);
+            else
+                g_string_append_printf(tip, "  %s – %s\n",
+                                       e->principal_name, rem);
             g_free(rem);
         }
     }

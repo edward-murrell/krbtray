@@ -209,3 +209,15 @@ msgstr "No se pudieron renovar los tickets Kerberos de <b>%s</b>.\n%s"
 
 msgid "Unknown error."
 msgstr "Error desconocido."
+
+msgid "  Make Default"
+msgstr "  Establecer como predeterminado"
+
+msgid "%s  (%s, default)"
+msgstr "%s  (%s, predeterminado)"
+
+msgid "  %s – %s (default)\n"
+msgstr "  %s – %s (predeterminado)\n"
+
+msgid "Could not make %s the default:\n%s"
+msgstr "No se pudo establecer %s como predeterminado:\n%s"

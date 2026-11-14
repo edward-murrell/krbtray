@@ -24,6 +24,7 @@ typedef struct {
     time_t   expiry;         /* Unix timestamp, 0 if no tickets      */
     time_t   renew_till;
     gboolean renewable;
+    gboolean is_default;     /* held in the default cache            */
     KrbState state;
 
     /* configuration flags */

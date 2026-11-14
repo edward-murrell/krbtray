@@ -61,6 +61,14 @@ If auto-kinit fails because the stored password is wrong (`krbtray_krb_error_is_
 
 Both dialogs opened from step 5 call `krbtray_app_refresh()` on success, which can rebuild the entry list.  Step 5 must stop iterating after opening either dialog.
 
+### Multi-principal store
+A Kerberos cache holds one principal.  When the default cache cannot hold more (`store_mode()` in `kerberos.c`: any type without `krb5_cc_support_switch`, plus Heimdal `DIR:`, whose collection code crashes in Heimdal 7), krbtray keeps one `FILE:` cache per principal in `$XDG_RUNTIME_DIR/krbtray/` and mirrors the default principal into the default cache.  Collection types (`KCM:`, MIT `KEYRING:`/`DIR:`) are used natively, with `krb5_cc_switch` for Make Default.
+
+- `store_sync()` copies whichever of the default cache and its store copy holds the later TGT over the other.  It runs before every store lookup, so a terminal `kinit` is never lost.
+- Look up a principal's cache through `find_ccache()`, never `krb5_cc_cache_match()` directly.
+- Store file names come from the full principal name with realm (`krb5_unparse_name`), not the name as typed.
+- kinit only takes over the default cache if it is empty, expired, or already holds that principal.
+
 ### New source files
 | File | Purpose |
 |------|---------|

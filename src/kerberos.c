@@ -102,28 +102,257 @@ static krb5_error_code mit_new_ccache(krb5_context ctx, krb5_ccache *out)
 }
 #endif
 
+/* ── Per-principal cache store ───────────────────────────────────────────── */
+
+/* Free a KrbCacheInfo and its contents.  Accepts NULL. */
+static void cache_info_free(KrbCacheInfo *info)
+{
+    if (!info) return;
+    g_free(info->principal_name);
+    g_free(info);
+}
+
+/* TRUE when the default cache can hold only one principal, so krbtray must
+ * keep its own cache per principal to let several stay signed in at once.
+ * Heimdal's DIR: collection is treated as a single cache because listing
+ * or switching it is broken in Heimdal 7. */
+static gboolean store_mode(krb5_context ctx)
+{
+    krb5_ccache def = NULL;
+    if (krb5_cc_default(ctx, &def) != 0)
+        return TRUE;
+
+    const char *type   = krb5_cc_get_type(ctx, def);
+    gboolean    single = !krb5_cc_support_switch(ctx, type);
+#ifdef KRBTRAY_HEIMDAL
+    if (g_strcmp0(type, "DIR") == 0)
+        single = TRUE;
+#endif
+    krb5_cc_close(ctx, def);
+    return single;
+}
+
+/* Directory holding the per-principal caches.  The user runtime directory
+ * is private to the user and cleared at logout.  Caller frees. */
+static gchar *store_dir(void)
+{
+    gchar *dir = g_build_filename(g_get_user_runtime_dir(), "krbtray", NULL);
+    g_mkdir_with_parents(dir, 0700);
+    return dir;
+}
+
+/* Open the store cache for principal_name.  The file need not exist yet.
+ * Characters that are unsafe in a file name are replaced. */
+static krb5_error_code store_resolve(krb5_context  ctx,
+                                     const gchar  *principal_name,
+                                     krb5_ccache  *out)
+{
+    GString *file = g_string_new("krb5cc_");
+    for (const gchar *p = principal_name; *p; p++) {
+        if (g_ascii_isalnum(*p) || strchr("._@-", *p))
+            g_string_append_c(file, *p);
+        else if (*p == '/')
+            g_string_append_c(file, '+');
+        else
+            g_string_append_c(file, '_');
+    }
+
+    gchar *dir  = store_dir();
+    gchar *name = g_strdup_printf("FILE:%s/%s", dir, file->str);
+    krb5_error_code ret = krb5_cc_resolve(ctx, name, out);
+
+    g_free(name);
+    g_free(dir);
+    g_string_free(file, TRUE);
+    return ret;
+}
+
+/* Replace the contents of `to` with everything in `from`. */
+static krb5_error_code copy_cache(krb5_context ctx,
+                                  krb5_ccache  from,
+                                  krb5_ccache  to)
+{
+    krb5_principal  principal = NULL;
+    krb5_cc_cursor  cursor;
+    krb5_creds      creds;
+    krb5_error_code ret;
+
+    ret = krb5_cc_get_principal(ctx, from, &principal);
+    if (ret) return ret;
+    ret = krb5_cc_initialize(ctx, to, principal);
+    krb5_free_principal(ctx, principal);
+    if (ret) return ret;
+
+    ret = krb5_cc_start_seq_get(ctx, from, &cursor);
+    if (ret) return ret;
+    while ((ret = krb5_cc_next_cred(ctx, from, &cursor, &creds)) == 0) {
+        ret = krb5_cc_store_cred(ctx, to, &creds);
+        krb5_free_cred_contents(ctx, &creds);
+        if (ret) break;
+    }
+    krb5_cc_end_seq_get(ctx, from, &cursor);
+    return ret == KRB5_CC_END ? 0 : ret;
+}
+
+/* Principal held in the default cache, or NULL if it is empty.
+ * Caller frees with g_free(). */
+static gchar *default_principal_name(krb5_context ctx)
+{
+    krb5_ccache    def       = NULL;
+    krb5_principal principal = NULL;
+    char          *name      = NULL;
+    gchar         *result    = NULL;
+
+    if (krb5_cc_default(ctx, &def) != 0)
+        return NULL;
+    if (krb5_cc_get_principal(ctx, def, &principal) == 0) {
+        if (krb5_unparse_name(ctx, principal, &name) == 0) {
+            result = g_strdup(name);
+            free(name);
+        }
+        krb5_free_principal(ctx, principal);
+    }
+    krb5_cc_close(ctx, def);
+    return result;
+}
+
+/* Bring the default cache and the default principal's store cache in line,
+ * copying whichever holds the later TGT over the other.  This picks up a
+ * kinit run from a terminal and pushes renewals made in the store out to
+ * the default cache. */
+static void store_sync(krb5_context ctx)
+{
+    krb5_ccache def = NULL, st = NULL;
+    if (krb5_cc_default(ctx, &def) != 0)
+        return;
+
+    KrbCacheInfo *di = cache_info_from_ccache(ctx, def);
+    if (di && store_resolve(ctx, di->principal_name, &st) == 0) {
+        KrbCacheInfo *si = cache_info_from_ccache(ctx, st);
+        if (!si || di->expiry > si->expiry)
+            copy_cache(ctx, def, st);
+        else if (si->expiry > di->expiry)
+            copy_cache(ctx, st, def);
+        cache_info_free(si);
+        krb5_cc_close(ctx, st);
+    }
+    cache_info_free(di);
+    krb5_cc_close(ctx, def);
+}
+
+/* Find the cache holding tickets for principal: its store cache in store
+ * mode, otherwise the matching cache in the collection. */
+static krb5_error_code find_ccache(krb5_context   ctx,
+                                   krb5_principal principal,
+                                   krb5_ccache   *out)
+{
+    if (!store_mode(ctx))
+        return krb5_cc_cache_match(ctx, principal, out);
+
+    char *name = NULL;
+    krb5_error_code ret = krb5_unparse_name(ctx, principal, &name);
+    if (ret) return ret;
+
+    store_sync(ctx);
+    ret = store_resolve(ctx, name, out);
+    free(name);
+    if (ret) return ret;
+
+    /* An empty or missing store file means no tickets. */
+    krb5_principal held = NULL;
+    if (krb5_cc_get_principal(ctx, *out, &held) != 0) {
+        krb5_cc_close(ctx, *out);
+        *out = NULL;
+        return KRB5_CC_NOTFOUND;
+    }
+    krb5_free_principal(ctx, held);
+    return 0;
+}
+
+/* Compare two KrbCacheInfo by principal name, for a stable menu order. */
+static gint cache_info_cmp(gconstpointer a, gconstpointer b)
+{
+    return g_strcmp0(((const KrbCacheInfo *)a)->principal_name,
+                     ((const KrbCacheInfo *)b)->principal_name);
+}
+
+/* List every principal in the store, marking the default one.  The default
+ * cache is included directly if its store copy could not be written. */
+static GList *store_scan(krb5_context ctx)
+{
+    store_sync(ctx);
+
+    gchar   *def_name = default_principal_name(ctx);
+    gboolean def_seen = FALSE;
+    GList   *result   = NULL;
+    gchar   *dir      = store_dir();
+    GDir    *d        = g_dir_open(dir, 0, NULL);
+
+    const gchar *file;
+    while (d && (file = g_dir_read_name(d)) != NULL) {
+        if (!g_str_has_prefix(file, "krb5cc_"))
+            continue;
+        gchar *name = g_strdup_printf("FILE:%s/%s", dir, file);
+        krb5_ccache cc = NULL;
+        if (krb5_cc_resolve(ctx, name, &cc) == 0) {
+            KrbCacheInfo *info = cache_info_from_ccache(ctx, cc);
+            if (info) {
+                info->is_default =
+                    g_strcmp0(info->principal_name, def_name) == 0;
+                def_seen |= info->is_default;
+                result = g_list_insert_sorted(result, info, cache_info_cmp);
+            }
+            krb5_cc_close(ctx, cc);
+        }
+        g_free(name);
+    }
+    if (d) g_dir_close(d);
+    g_free(dir);
+
+    if (def_name && !def_seen) {
+        krb5_ccache def = NULL;
+        if (krb5_cc_default(ctx, &def) == 0) {
+            KrbCacheInfo *info = cache_info_from_ccache(ctx, def);
+            if (info) {
+                info->is_default = TRUE;
+                result = g_list_insert_sorted(result, info, cache_info_cmp);
+            }
+            krb5_cc_close(ctx, def);
+        }
+    }
+    g_free(def_name);
+    return result;
+}
+
 /* ── Public API ──────────────────────────────────────────────────────────── */
 
-/* Walk every ccache in the collection and return a list of KrbCacheInfo
- * for each one that contains a valid TGT. */
+/* Return a KrbCacheInfo for every principal that holds a TGT, from the
+ * per-principal store or the native collection, with the default marked. */
 GList *krbtray_krb_scan_caches(krb5_context ctx)
 {
+    if (store_mode(ctx))
+        return store_scan(ctx);
+
     krb5_cccol_cursor col_cursor;
     if (krb5_cccol_cursor_new(ctx, &col_cursor) != 0)
         return NULL;
 
-    GList      *result  = NULL;
+    gchar      *def_name = default_principal_name(ctx);
+    GList      *result   = NULL;
     krb5_ccache ccache;
 
     while (krb5_cccol_cursor_next(ctx, col_cursor, &ccache) == 0
            && ccache != NULL) {
         KrbCacheInfo *info = cache_info_from_ccache(ctx, ccache);
-        if (info)
+        if (info) {
+            info->is_default = g_strcmp0(info->principal_name, def_name) == 0;
             result = g_list_append(result, info);
+        }
         krb5_cc_close(ctx, ccache);
     }
 
     krb5_cccol_cursor_free(ctx, &col_cursor);
+    g_free(def_name);
     return result;
 }
 
@@ -137,7 +366,7 @@ KrbCacheInfo *krbtray_krb_get_cache_info(krb5_context  ctx,
         return NULL;
 
     krb5_ccache ccache = NULL;
-    krb5_error_code ret = krb5_cc_cache_match(ctx, principal, &ccache);
+    krb5_error_code ret = find_ccache(ctx, principal, &ccache);
     krb5_free_principal(ctx, principal);
 
     if (ret != 0)
@@ -145,6 +374,11 @@ KrbCacheInfo *krbtray_krb_get_cache_info(krb5_context  ctx,
 
     KrbCacheInfo *info = cache_info_from_ccache(ctx, ccache);
     krb5_cc_close(ctx, ccache);
+    if (info) {
+        gchar *def_name = default_principal_name(ctx);
+        info->is_default = g_strcmp0(info->principal_name, def_name) == 0;
+        g_free(def_name);
+    }
     return info;
 }
 
@@ -166,8 +400,9 @@ KrbState krbtray_krb_compute_state(time_t expiry,
     return KRB_STATE_VALID;
 }
 
-/* Renew the TGT for the named principal in-place, extending its lifetime
- * without requiring the user's password. */
+/* Renew the TGT for the named principal in place, extending its lifetime
+ * without requiring the user's password.  A renewed default principal is
+ * copied to the default cache too. */
 krb5_error_code krbtray_krb_renew(krb5_context ctx, const gchar *principal_name)
 {
     krb5_principal  principal = NULL;
@@ -180,7 +415,7 @@ krb5_error_code krbtray_krb_renew(krb5_context ctx, const gchar *principal_name)
     ret = krb5_parse_name(ctx, principal_name, &principal);
     if (ret) return ret;
 
-    ret = krb5_cc_cache_match(ctx, principal, &ccache);
+    ret = find_ccache(ctx, principal, &ccache);
     if (ret) goto out_principal;
 
     ret = krb5_get_renewed_creds(ctx, &new_creds, principal, ccache, NULL);
@@ -190,6 +425,8 @@ krb5_error_code krbtray_krb_renew(krb5_context ctx, const gchar *principal_name)
     if (ret) goto out_creds;
 
     ret = krb5_cc_store_cred(ctx, ccache, &new_creds);
+    if (ret == 0 && store_mode(ctx))
+        store_sync(ctx);
 
 out_creds:
     krb5_free_cred_contents(ctx, &new_creds);
@@ -201,7 +438,9 @@ out_principal:
 }
 
 /* Obtain a fresh TGT for the named principal using the supplied password,
- * requesting a 7-day renewable lifetime. */
+ * requesting a 7-day renewable lifetime.  In store mode the principal also
+ * becomes the default if the default cache is empty, expired or already
+ * holds it; another signed-in principal stays the default. */
 krb5_error_code krbtray_krb_kinit(krb5_context  ctx,
                                    const gchar  *principal_name,
                                    const gchar  *password)
@@ -210,6 +449,7 @@ krb5_error_code krbtray_krb_kinit(krb5_context  ctx,
     krb5_ccache                ccache    = NULL;
     krb5_creds                 creds;
     krb5_get_init_creds_opt   *opt       = NULL;
+    char                      *full_name = NULL; /* with realm, as stored */
     krb5_error_code            ret;
 
     memset(&creds, 0, sizeof(creds));
@@ -228,8 +468,18 @@ krb5_error_code krbtray_krb_kinit(krb5_context  ctx,
                                        NULL, NULL, 0, NULL, opt);
     if (ret) goto out_opt;
 
+    gboolean use_store = store_mode(ctx);
+
     /* Find or create the ccache for this principal. */
-    if (krb5_cc_cache_match(ctx, principal, &ccache) != 0) {
+    if (use_store) {
+        /* Save the current default principal to its store cache first, so
+         * replacing the default cache below cannot lose its tickets. */
+        store_sync(ctx);
+        ret = krb5_unparse_name(ctx, principal, &full_name);
+        if (ret) goto out_creds;
+        ret = store_resolve(ctx, full_name, &ccache);
+        if (ret) goto out_creds;
+    } else if (krb5_cc_cache_match(ctx, principal, &ccache) != 0) {
 #ifdef KRBTRAY_MIT
         ret = mit_new_ccache(ctx, &ccache);
 #else
@@ -243,9 +493,22 @@ krb5_error_code krbtray_krb_kinit(krb5_context  ctx,
 
     ret = krb5_cc_store_cred(ctx, ccache, &creds);
 
+    if (ret == 0 && use_store) {
+        krb5_ccache def = NULL;
+        if (krb5_cc_default(ctx, &def) == 0) {
+            KrbCacheInfo *di = cache_info_from_ccache(ctx, def);
+            if (!di || di->expiry <= time(NULL) ||
+                g_strcmp0(di->principal_name, full_name) == 0)
+                copy_cache(ctx, ccache, def);
+            cache_info_free(di);
+            krb5_cc_close(ctx, def);
+        }
+    }
+
 out_ccache:
     krb5_cc_close(ctx, ccache);
 out_creds:
+    free(full_name);
     krb5_free_cred_contents(ctx, &creds);
 out_opt:
     krb5_get_init_creds_opt_free(ctx, opt);
@@ -255,7 +518,8 @@ out_principal:
 }
 
 /* Destroy the credential cache for the named principal, invalidating all
- * its tickets immediately. */
+ * its tickets immediately.  In store mode the default cache is destroyed
+ * too if it holds the same principal. */
 krb5_error_code krbtray_krb_destroy(krb5_context ctx, const gchar *principal_name)
 {
     krb5_principal  principal = NULL;
@@ -265,12 +529,54 @@ krb5_error_code krbtray_krb_destroy(krb5_context ctx, const gchar *principal_nam
     ret = krb5_parse_name(ctx, principal_name, &principal);
     if (ret) return ret;
 
-    ret = krb5_cc_cache_match(ctx, principal, &ccache);
+    ret = find_ccache(ctx, principal, &ccache);
     krb5_free_principal(ctx, principal);
     if (ret) return ret;
 
     ret = krb5_cc_destroy(ctx, ccache);
     /* krb5_cc_destroy closes the ccache even on failure. */
+
+    if (store_mode(ctx)) {
+        gchar *def_name = default_principal_name(ctx);
+        krb5_ccache def = NULL;
+        if (g_strcmp0(def_name, principal_name) == 0 &&
+            krb5_cc_default(ctx, &def) == 0)
+            krb5_cc_destroy(ctx, def);
+        g_free(def_name);
+    }
+    return ret;
+}
+
+/* Make the named principal the one programs see in the default cache: copy
+ * its store cache over the default cache, or switch the collection's
+ * primary cache on collection types. */
+krb5_error_code krbtray_krb_make_default(krb5_context  ctx,
+                                         const gchar  *principal_name)
+{
+    krb5_principal  principal = NULL;
+    krb5_ccache     ccache    = NULL;
+    krb5_error_code ret;
+
+    ret = krb5_parse_name(ctx, principal_name, &principal);
+    if (ret) return ret;
+
+    /* In store mode this also saves the current default principal's
+     * tickets to its store cache before they are overwritten. */
+    ret = find_ccache(ctx, principal, &ccache);
+    krb5_free_principal(ctx, principal);
+    if (ret) return ret;
+
+    if (store_mode(ctx)) {
+        krb5_ccache def = NULL;
+        ret = krb5_cc_default(ctx, &def);
+        if (ret == 0) {
+            ret = copy_cache(ctx, ccache, def);
+            krb5_cc_close(ctx, def);
+        }
+    } else {
+        ret = krb5_cc_switch(ctx, ccache);
+    }
+    krb5_cc_close(ctx, ccache);
     return ret;
 }
 

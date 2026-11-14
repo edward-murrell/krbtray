@@ -239,6 +239,7 @@ static void app_refresh_internal(KrbTrayApp *app, gboolean force_network)
         e->expiry      = 0;
         e->renew_till  = 0;
         e->renewable   = FALSE;
+        e->is_default  = FALSE;
         e->state       = KRB_STATE_NO_TICKETS;
     }
 
@@ -252,6 +253,7 @@ static void app_refresh_internal(KrbTrayApp *app, gboolean force_network)
         e->expiry      = ci->expiry;
         e->renew_till  = ci->renew_till;
         e->renewable   = ci->renewable;
+        e->is_default  = ci->is_default;
         e->state       = krbtray_krb_compute_state(
                              ci->expiry,
                              app->renewal_threshold_mins);
@@ -377,6 +379,7 @@ static void app_refresh_internal(KrbTrayApp *app, gboolean force_network)
                 e->expiry      = ci->expiry;
                 e->renew_till  = ci->renew_till;
                 e->renewable   = ci->renewable;
+                e->is_default  = ci->is_default;
                 e->state       = krbtray_krb_compute_state(
                                      ci->expiry,
                                      app->renewal_threshold_mins);

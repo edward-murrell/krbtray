@@ -2,7 +2,7 @@
 
 A GTK3 system tray application for Kerberos ticket management on Linux Mint / Cinnamon (and other desktops that show `GtkStatusIcon`, such as XFCE and MATE — see [Desktop compatibility](#desktop-compatibility)).
 
-krbtray sits in your system tray, monitors the state of all Kerberos TGTs in your credential cache collection, automatically renews tickets before they expire, and optionally stores your Kerberos password in the system keyring so it can re-authenticate for you.
+krbtray sits in your system tray, monitors the state of all your Kerberos TGTs, automatically renews tickets before they expire, and optionally stores your Kerberos password in the system keyring so it can re-authenticate for you.
 
 ![krbtray screenshot](docs/krbtray.png)
 
@@ -14,13 +14,14 @@ krbtray sits in your system tray, monitors the state of all Kerberos TGTs in you
   - `security-low` (red/grey) — expired or no tickets
 - Tooltip lists every principal and its remaining lifetime
 - Right-click (or left-click) menu per principal:
+  - Make Default (when more than one principal is signed in)
   - Renew Now
   - Destroy Tickets
   - Authenticate… (kinit with GTK password dialog)
 - Auto-renewal: renews any renewable TGT a configurable number of minutes before expiry; sends a desktop notification if renewal fails
 - Password storage via the system Secret Service (GNOME Keyring / KWallet through libsecret)
 - Auto-kinit on startup using a stored password
-- Multi-principal support via the credential cache collection (`KCM:`, `DIR:` or, on MIT, `KEYRING:`)
+- Several principals signed in at once, with a choice of which one other programs use (see [Multi-principal support](#multi-principal-support))
 - Works with Heimdal (Debian, Ubuntu, Mint) and MIT Kerberos (Fedora, RHEL and derivatives)
 - Preferences dialog: renewal threshold, check interval, autostart toggle, principal management
 - Autostart via XDG `~/.config/autostart/` (standard for Cinnamon and most desktop environments)
@@ -140,21 +141,28 @@ auto_kinit     = true
 
 ## Multi-principal support
 
-The `krb5_cccol_cursor` API is used to iterate over all credential caches in the collection. For this to see more than one principal you need a collection-aware ccache type:
+Several principals can stay signed in at once, and no system setup is needed.  One of them is the *default*: the principal that `ssh`, `smbclient` and other programs use.  When two or more principals have tickets, the menu marks the default and offers **Make Default** on the others.
+
+A normal Kerberos cache holds one principal.  When the default cache is a plain `FILE:` cache, which Heimdal and MIT both use out of the box, krbtray keeps a separate cache for each principal in `$XDG_RUNTIME_DIR/krbtray/`.  It copies the default principal's tickets into the default cache.  The two are kept in step on every check, so a `kinit` from a terminal is picked up too.
+
+Authenticating a second principal does not change the default unless the default cache is empty or expired.  Destroying the default principal's tickets empties the default cache.
+
+If you use a collection cache type such as `KCM:` (the default on Fedora and RHEL), krbtray uses it directly and **Make Default** switches the collection's primary cache.  Heimdal's `DIR:` type is treated like `FILE:` because its collection support is broken in Heimdal 7.
+
+### GNOME Online Accounts
+
+Cinnamon on Linux Mint, LMDE and Debian installs GNOME Online Accounts (GOA) by default, as does GNOME.  GOA watches the default cache and adds a temporary Kerberos account for each principal it sees there.  It can only see the default cache.  When you make another principal the default, GOA loses sight of the old one and shows "Failed to sign in to …" or "Failed to sign in to multiple accounts".  The same happens when you switch principals with `kinit` in a terminal.
+
+GOA's Kerberos support overlaps with krbtray: both sign in and renew tickets.  If you only use GOA for Kerberos, stop it tracking Kerberos by leaving `kerberos` out of its allowed providers:
 
 ```bash
-# KCM daemon (recommended — ships with Heimdal; sssd-kcm on Fedora/RHEL):
-export KRB5CCNAME=KCM:
-
-# Or directory-based:
-export KRB5CCNAME=DIR:~/.cache/krb5/
+gsettings set org.gnome.online-accounts whitelisted-providers \
+    "['google', 'owncloud', 'imap_smtp', 'exchange', 'windows_live', 'fedora']"
 ```
 
-Add the appropriate `KRB5CCNAME` export to `~/.profile` or `/etc/environment` so the setting persists across sessions.
+Log out and back in to clear the temporary accounts.  To see what GOA is tracking, run `gnome-online-accounts-gtk` or read `~/.config/goa-1.0/accounts.conf`.
 
-Fedora and RHEL already default to `KCM:` (via sssd-kcm), or `KEYRING:persistent:` on some RHEL configurations, so no change is needed there.
-
-With the default `FILE:` cache only the single default cache is visible, which limits you to one principal.
+A collection cache such as `KCM:` also stops the notifications, because GOA can then see every principal.
 
 ## Keyring integration
 

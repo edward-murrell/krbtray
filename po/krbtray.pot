@@ -274,3 +274,22 @@ msgstr ""
 #: src/notify.c
 msgid "Unknown error."
 msgstr ""
+
+#: src/tray.c
+msgid "  Make Default"
+msgstr ""
+
+#: src/tray.c
+#, c-format
+msgid "%s  (%s, default)"
+msgstr ""
+
+#: src/tray.c
+#, c-format
+msgid "  %s – %s (default)\n"
+msgstr ""
+
+#: src/tray.c
+#, c-format
+msgid "Could not make %s the default:\n%s"
+msgstr ""

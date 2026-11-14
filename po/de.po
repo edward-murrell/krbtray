@@ -209,3 +209,15 @@ msgstr "Kerberos-Tickets für <b>%s</b> konnten nicht erneuert werden.\n%s"
 
 msgid "Unknown error."
 msgstr "Unbekannter Fehler."
+
+msgid "  Make Default"
+msgstr "  Als Standard festlegen"
+
+msgid "%s  (%s, default)"
+msgstr "%s  (%s, Standard)"
+
+msgid "  %s – %s (default)\n"
+msgstr "  %s – %s (Standard)\n"
+
+msgid "Could not make %s the default:\n%s"
+msgstr "%s konnte nicht als Standard festgelegt werden:\n%s"

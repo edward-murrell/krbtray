@@ -211,3 +211,15 @@ msgstr "Could not renew Kerberos tickets for <b>%s</b>.\n%s"
 
 msgid "Unknown error."
 msgstr "Unknown error."
+
+msgid "  Make Default"
+msgstr "  Make Default"
+
+msgid "%s  (%s, default)"
+msgstr "%s  (%s, default)"
+
+msgid "  %s – %s (default)\n"
+msgstr "  %s – %s (default)\n"
+
+msgid "Could not make %s the default:\n%s"
+msgstr "Could not make %s the default:\n%s"

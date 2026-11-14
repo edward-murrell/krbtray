@@ -25,15 +25,18 @@ typedef struct {
     time_t   expiry;         /* TGT endtime (Unix timestamp)                */
     time_t   renew_till;     /* max renewable lifetime (Unix timestamp)     */
     gboolean renewable;
+    gboolean is_default;     /* held in the default cache, which tools
+                                such as ssh and smbclient use          */
 } KrbCacheInfo;
 
 /*
- * Scan all ccaches in the credential cache collection.
+ * Scan for tickets of every principal.
  * Returns a GList of KrbCacheInfo * (caller frees contents and list).
  *
- * NOTE: For multi-principal support the KCM or DIR ccache type is recommended
- * (set KRB5CCNAME=KCM: or use the KCM daemon).  With a plain FILE: cache only
- * the default cache is usually visible.
+ * When the default cache can hold only one principal (FILE:, which both
+ * Heimdal and MIT use by default), krbtray keeps a cache per principal in
+ * $XDG_RUNTIME_DIR/krbtray and mirrors the default principal's tickets into
+ * the default cache.  Collection types such as KCM: are used natively.
  */
 GList      *krbtray_krb_scan_caches  (krb5_context ctx);
 
@@ -59,6 +62,11 @@ krb5_error_code krbtray_krb_renew  (krb5_context  ctx,
 krb5_error_code krbtray_krb_kinit  (krb5_context  ctx,
                                     const gchar  *principal_name,
                                     const gchar  *password);
+
+/* Make principal_name the one held in the default cache, so programs that
+ * use the default cache (ssh, smbclient, ...) authenticate as it. */
+krb5_error_code krbtray_krb_make_default (krb5_context  ctx,
+                                          const gchar  *principal_name);
 
 /* Destroy all tickets for principal_name. */
 krb5_error_code krbtray_krb_destroy (krb5_context  ctx,
