@@ -72,6 +72,9 @@ typedef struct {
     guint            net_changed_id;
     guint            offline_timeout_id;
     gboolean         refresh_pending;
+
+    /* GNOME Online Accounts watcher (see goa.c); NULL if GOA is absent. */
+    GDBusObjectManager *goa_manager;
 } KrbTrayApp;
 
 /* ── Lifecycle ───────────────────────────────────────────────────────────── */

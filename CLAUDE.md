@@ -69,12 +69,20 @@ A Kerberos cache holds one principal.  When the default cache cannot hold more (
 - Store file names come from the full principal name with realm (`krb5_unparse_name`), not the name as typed.
 - kinit only takes over the default cache if it is empty, expired, or already holds that principal.
 
+### GNOME Online Accounts
+GOA creates a temporary Kerberos account for each principal it sees in the default cache.  On a FILE cache it flags an account as needing attention ("Failed to sign in") whenever that principal stops being the default.  `goa.c` watches `org.gnome.OnlineAccounts` with a `GDBusObjectManagerClient` (never auto-starting GOA) and sets `TicketingDisabled = true` on Kerberos accounts for principals krbtray tracks (managed or holding tickets).  GOA then stops checking those accounts.
+
+- It runs when GOA adds an account (`object-added`) and after every refresh (step 7), because temporary accounts are recreated each login.
+- Only use GOA's public `org.gnome.OnlineAccounts` interface.  `org.gnome.Identity` (goa-identity-service) is private and unstable.
+- With ticketing off, GOA freezes `AttentionNeeded` in both directions, so it must be turned off before GOA flags the account.
+
 ### New source files
 | File | Purpose |
 |------|---------|
 | `src/passwd_dialog.c/h` | Change Password dialog |
+| `src/goa.c/h` | Keeps GNOME Online Accounts away from principals krbtray tracks |
 
-`passwd_dialog.c` must be listed in the `SOURCES` set in `CMakeLists.txt`.
+Both must be listed in the `SOURCES` set in `CMakeLists.txt`.
 
 ### Heimdal and MIT Kerberos
 The code builds against both.  CMake defines exactly one of `KRBTRAY_HEIMDAL` (Debian/Ubuntu/Mint) or `KRBTRAY_MIT` (Fedora/RHEL); `kerberos.h` refuses to compile without one.  Keep implementation-specific code inside `kerberos.c` behind those macros, and keep Heimdal behaviour unchanged when adding MIT-only fixes.  Known differences:

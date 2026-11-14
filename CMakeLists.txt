@@ -61,6 +61,7 @@ set(SOURCES
     src/passwd_dialog.c
     src/prefs.c
     src/notify.c
+    src/goa.c
 )
 
 add_executable(krbtray ${SOURCES})

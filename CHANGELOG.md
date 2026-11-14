@@ -14,8 +14,9 @@ All notable changes to krbtray are documented here.
 - Signing in a second principal no longer replaces the first.
 - Fix a crash with Heimdal `DIR:` caches, whose collection support is broken
   in Heimdal 7.
-- The README explains the GNOME Online Accounts notification seen when
-  switching principals, and how to turn it off.
+- Stop GNOME Online Accounts showing "Failed to sign in" when switching
+  principals.  krbtray turns off GOA ticketing over D-Bus for the principals
+  it tracks, so GOA leaves them alone.
 
 ## [1.1.4] – 2026-11-08
 

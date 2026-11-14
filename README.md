@@ -151,18 +151,11 @@ If you use a collection cache type such as `KCM:` (the default on Fedora and RHE
 
 ### GNOME Online Accounts
 
-Cinnamon on Linux Mint, LMDE and Debian installs GNOME Online Accounts (GOA) by default, as does GNOME.  GOA watches the default cache and adds a temporary Kerberos account for each principal it sees there.  It can only see the default cache.  When you make another principal the default, GOA loses sight of the old one and shows "Failed to sign in to …" or "Failed to sign in to multiple accounts".  The same happens when you switch principals with `kinit` in a terminal.
+Cinnamon on Linux Mint, LMDE and Debian installs GNOME Online Accounts (GOA) by default, as does GNOME.  GOA watches the default cache and adds a temporary Kerberos account for each principal it sees there.  It can only see the default cache.  When another principal becomes the default, GOA loses sight of the old one and shows "Failed to sign in to …" or "Failed to sign in to multiple accounts".
 
-GOA's Kerberos support overlaps with krbtray: both sign in and renew tickets.  If you only use GOA for Kerberos, stop it tracking Kerberos by leaving `kerberos` out of its allowed providers:
+To prevent this, krbtray turns off GOA ticketing for each principal it tracks, over D-Bus.  GOA then leaves those principals alone.  Other GOA accounts, and Kerberos principals krbtray does not track, are not touched.  If GOA is not running, krbtray does nothing.
 
-```bash
-gsettings set org.gnome.online-accounts whitelisted-providers \
-    "['google', 'owncloud', 'imap_smtp', 'exchange', 'windows_live', 'fedora']"
-```
-
-Log out and back in to clear the temporary accounts.  To see what GOA is tracking, run `gnome-online-accounts-gtk` or read `~/.config/goa-1.0/accounts.conf`.
-
-A collection cache such as `KCM:` also stops the notifications, because GOA can then see every principal.
+An account GOA flagged before krbtray turned its ticketing off stays flagged until you next log in.  To turn GOA ticketing back on for a principal, use `gnome-online-accounts-gtk`.
 
 ## Keyring integration
 

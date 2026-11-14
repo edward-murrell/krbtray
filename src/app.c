@@ -5,6 +5,7 @@
 #include "keyring.h"
 #include "kinit_dialog.h"
 #include "passwd_dialog.h"
+#include "goa.h"
 
 #include <glib/gstdio.h>
 #include <gio/gio.h>
@@ -391,6 +392,10 @@ static void app_refresh_internal(KrbTrayApp *app, gboolean force_network)
 
     /* 6. Update the tray icon and menu. */
     krbtray_tray_update(app);
+
+    /* 7. Keep GNOME Online Accounts away from principals tracked here,
+          including any that appeared during this refresh. */
+    krbtray_goa_sync(app);
 }
 
 /* Public refresh entry point: re-read ticket state and, when the network
@@ -583,6 +588,9 @@ KrbTrayApp *krbtray_app_new(void)
     krbtray_app_init_sleep_monitor(app);
     krbtray_app_init_network_monitor(app);
 
+    /* GNOME Online Accounts. */
+    krbtray_goa_init(app);
+
     /* Tray icon. */
     krbtray_tray_create(app);
 
@@ -621,6 +629,7 @@ void krbtray_app_free(KrbTrayApp *app)
                                              app->sleep_signal_id);
     if (app->system_bus)
         g_object_unref(app->system_bus);
+    krbtray_goa_uninit(app);
     for (GList *l = app->entries; l; l = l->next)
         entry_free(l->data);
     g_list_free(app->entries);
