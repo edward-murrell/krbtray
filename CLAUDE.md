@@ -29,6 +29,9 @@ When the user clicks "Authenticate" for a principal that already has a stored ke
 
 All "Authenticate" entry points (tray menu, Preferences toolbar) must go through `krbtray_app_authenticate()` in `app.c`, not call `krbtray_kinit_dialog_run()` directly.
 
+### Dialog actions
+A button added with `gtk_dialog_add_action_widget()` closes the dialog as soon as it is clicked.  Never do the work in its `clicked` handler.  Run the attempt from the dialog's `response` signal, connected before `gtk_dialog_run()`, and call `g_signal_stop_emission_by_name(dialog, "response")` when it fails so the dialog stays open with the error shown.  Enter-key handlers call `gtk_dialog_response(dialog, GTK_RESPONSE_OK)`.
+
 ### Forced password change (`KRB5KDC_ERR_KEY_EXPIRED`)
 Wherever kinit is called and `KRB5KDC_ERR_KEY_EXPIRED` is returned, the Change Password dialog must be opened immediately with `must_change = TRUE`.  This applies to:
 - Manual authentication via the kinit dialog (`kinit_dialog.c`).

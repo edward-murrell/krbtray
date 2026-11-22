@@ -23,11 +23,11 @@ typedef struct {
 /* ── Callback: attempt the password change ───────────────────────────────── */
 
 /* Validate the form fields, call the Kerberos password-change API, and on
- * success update the keyring and obtain a fresh TGT with the new password. */
-static void on_change_clicked(GtkButton *btn, PasswdDialogData *d)
+ * success update the keyring and obtain a fresh TGT with the new password.
+ * Returns FALSE, with the reason shown in the dialog, if the dialog should
+ * stay open. */
+static gboolean try_change(PasswdDialogData *d)
 {
-    (void)btn;
-
     const gchar *current_pw =
         gtk_entry_get_text(GTK_ENTRY(d->entry_current_pw));
     const gchar *new_pw =
@@ -39,21 +39,21 @@ static void on_change_clicked(GtkButton *btn, PasswdDialogData *d)
         gtk_label_set_text(GTK_LABEL(d->label_error),
                            _("Please enter your current password."));
         gtk_widget_show(d->label_error);
-        return;
+        return FALSE;
     }
 
     if (!new_pw || *new_pw == '\0') {
         gtk_label_set_text(GTK_LABEL(d->label_error),
                            _("Please enter a new password."));
         gtk_widget_show(d->label_error);
-        return;
+        return FALSE;
     }
 
     if (g_strcmp0(new_pw, confirm_pw) != 0) {
         gtk_label_set_text(GTK_LABEL(d->label_error),
                            _("New passwords do not match."));
         gtk_widget_show(d->label_error);
-        return;
+        return FALSE;
     }
 
     gtk_widget_set_sensitive(d->btn_change, FALSE);
@@ -86,7 +86,7 @@ static void on_change_clicked(GtkButton *btn, PasswdDialogData *d)
         if (free_msg)
             krb5_free_error_message(d->app->krb_ctx, msg);
         gtk_widget_set_sensitive(d->btn_change, TRUE);
-        return;
+        return FALSE;
     }
 
     /* Update keyring if the principal has a stored password. */
@@ -100,15 +100,23 @@ static void on_change_clicked(GtkButton *btn, PasswdDialogData *d)
 
     krbtray_app_save_config(d->app);
     krbtray_app_refresh(d->app);
+    return TRUE;
+}
 
-    gtk_dialog_response(GTK_DIALOG(d->dialog), GTK_RESPONSE_OK);
+/* Dialog response handler: attempt the change when Change Password is
+ * chosen, and keep the dialog open if it fails.  GTK closes the dialog on
+ * any response, so a failed attempt must stop the signal here. */
+static void on_response(GtkDialog *dialog, gint response_id, PasswdDialogData *d)
+{
+    if (response_id == GTK_RESPONSE_OK && !try_change(d))
+        g_signal_stop_emission_by_name(dialog, "response");
 }
 
 /* Allow Enter in any password field to submit the form. */
 static void on_entry_activate(GtkEntry *entry, PasswdDialogData *d)
 {
     (void)entry;
-    on_change_clicked(NULL, d);
+    gtk_dialog_response(GTK_DIALOG(d->dialog), GTK_RESPONSE_OK);
 }
 
 /* ── Public entry point ──────────────────────────────────────────────────── */
@@ -222,9 +230,11 @@ gboolean krbtray_passwd_dialog_run(KrbTrayApp  *app,
     gtk_widget_set_halign(d.label_error, GTK_ALIGN_START);
     gtk_grid_attach(GTK_GRID(grid), d.label_error, 0, row, 2, 1);
 
-    /* Wire signals. */
-    g_signal_connect(d.btn_change, "clicked",
-                     G_CALLBACK(on_change_clicked), &d);
+    /* Wire signals.  The response handler is connected before
+     * gtk_dialog_run() adds its own, so it can stop a failed attempt from
+     * closing the dialog. */
+    g_signal_connect(d.dialog, "response",
+                     G_CALLBACK(on_response), &d);
     g_signal_connect(d.entry_current_pw, "activate",
                      G_CALLBACK(on_entry_activate), &d);
     g_signal_connect(d.entry_new_pw, "activate",

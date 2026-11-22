@@ -17,6 +17,11 @@ All notable changes to krbtray are documented here.
 - Stop GNOME Online Accounts showing "Failed to sign in" when switching
   principals.  krbtray turns off GOA ticketing over D-Bus for the principals
   it tracks, so GOA leaves them alone.
+- Fix the Authenticate and Change Password dialogs closing as if they had
+  succeeded when the attempt failed, which hid the error.  Authenticate is now
+  unavailable until a password is entered.
+- Hide **Renew Now** once a ticket has expired or can no longer be renewed.
+  The KDC refuses such renewals; **Authenticate…** is offered instead.
 
 ## [1.1.4] – 2026-11-08
 

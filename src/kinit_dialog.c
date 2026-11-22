@@ -7,9 +7,6 @@
 #include <glib/gi18n.h>
 #include <string.h>
 
-/* Custom response code: kinit succeeded but the KDC requires a password change. */
-#define RESPONSE_MUST_CHANGE_PW 100
-
 /* ── Dialog state ────────────────────────────────────────────────────────── */
 
 typedef struct {
@@ -21,16 +18,27 @@ typedef struct {
     GtkWidget *btn_login;
 
     KrbTrayApp *app;
+    gboolean    must_change;  /* KDC requires a password change first */
 } KinitDialogData;
 
 /* ── Callback: try to kinit ──────────────────────────────────────────────── */
 
-/* Validate the form, attempt kinit, and on success mark the principal as
- * managed and optionally save the password to the keyring. */
-static void on_login_clicked(GtkButton *btn, KinitDialogData *d)
+/* Allow Authenticate only once both a principal and a password are entered,
+ * so an empty password is never sent to the KDC. */
+static void update_login_sensitive(GtkEditable *editable, KinitDialogData *d)
 {
-    (void)btn;
+    (void)editable;
+    const gchar *principal = gtk_entry_get_text(GTK_ENTRY(d->entry_principal));
+    const gchar *password  = gtk_entry_get_text(GTK_ENTRY(d->entry_password));
+    gtk_widget_set_sensitive(d->btn_login, *principal != '\0' &&
+                                           *password  != '\0');
+}
 
+/* Validate the form, attempt kinit, and on success mark the principal as
+ * managed and optionally save the password to the keyring.  Returns FALSE,
+ * with the reason shown in the dialog, if the dialog should stay open. */
+static gboolean try_login(KinitDialogData *d)
+{
     const gchar *principal =
         gtk_entry_get_text(GTK_ENTRY(d->entry_principal));
     const gchar *password  =
@@ -40,7 +48,7 @@ static void on_login_clicked(GtkButton *btn, KinitDialogData *d)
         gtk_label_set_text(GTK_LABEL(d->label_error),
                            _("Please enter a principal."));
         gtk_widget_show(d->label_error);
-        return;
+        return FALSE;
     }
 
     gtk_widget_set_sensitive(d->btn_login, FALSE);
@@ -57,9 +65,8 @@ static void on_login_clicked(GtkButton *btn, KinitDialogData *d)
     if (ret != 0) {
         /* The KDC requires a password change before granting a TGT. */
         if (ret == KRB5KDC_ERR_KEY_EXPIRED) {
-            gtk_dialog_response(GTK_DIALOG(d->dialog),
-                                RESPONSE_MUST_CHANGE_PW);
-            return;
+            d->must_change = TRUE;
+            return TRUE;
         }
 
         const char *msg = krb5_get_error_message(d->app->krb_ctx, ret);
@@ -69,8 +76,8 @@ static void on_login_clicked(GtkButton *btn, KinitDialogData *d)
         gtk_widget_show(d->label_error);
         g_free(markup);
         krb5_free_error_message(d->app->krb_ctx, msg);
-        gtk_widget_set_sensitive(d->btn_login, TRUE);
-        return;
+        update_login_sensitive(NULL, d);
+        return FALSE;
     }
 
     /* Ensure the principal is in the managed list. */
@@ -87,17 +94,27 @@ static void on_login_clicked(GtkButton *btn, KinitDialogData *d)
 
     krbtray_app_save_config(d->app);
     krbtray_app_refresh(d->app);
+    return TRUE;
+}
 
-    gtk_dialog_response(GTK_DIALOG(d->dialog), GTK_RESPONSE_OK);
+/* Dialog response handler: attempt the login when Authenticate is chosen,
+ * and keep the dialog open if it fails.  GTK closes the dialog on any
+ * response, so a failed attempt must stop the signal here. */
+static void on_response(GtkDialog *dialog, gint response_id, KinitDialogData *d)
+{
+    if (response_id == GTK_RESPONSE_OK && !try_login(d))
+        g_signal_stop_emission_by_name(dialog, "response");
 }
 
 /* ── Callback: Enter key in password field ───────────────────────────────── */
 
-/* Allow the user to press Enter in the password field to submit. */
+/* Allow the user to press Enter in the password field to submit, unless
+ * the form is not yet complete. */
 static void on_password_activate(GtkEntry *entry, KinitDialogData *d)
 {
     (void)entry;
-    on_login_clicked(NULL, d);
+    if (gtk_widget_get_sensitive(d->btn_login))
+        gtk_dialog_response(GTK_DIALOG(d->dialog), GTK_RESPONSE_OK);
 }
 
 /* ── Public ──────────────────────────────────────────────────────────────── */
@@ -185,11 +202,18 @@ gboolean krbtray_kinit_dialog_run(KrbTrayApp *app, const gchar *principal_name)
     gtk_widget_set_halign(d.label_error, GTK_ALIGN_START);
     gtk_grid_attach(GTK_GRID(grid), d.label_error, 0, row, 2, 1);
 
-    /* Wire signals. */
-    g_signal_connect(d.btn_login, "clicked",
-                     G_CALLBACK(on_login_clicked), &d);
+    /* Wire signals.  The response handler is connected before
+     * gtk_dialog_run() adds its own, so it can stop a failed attempt from
+     * closing the dialog. */
+    g_signal_connect(d.dialog, "response",
+                     G_CALLBACK(on_response), &d);
     g_signal_connect(d.entry_password, "activate",
                      G_CALLBACK(on_password_activate), &d);
+    g_signal_connect(d.entry_principal, "changed",
+                     G_CALLBACK(update_login_sensitive), &d);
+    g_signal_connect(d.entry_password, "changed",
+                     G_CALLBACK(update_login_sensitive), &d);
+    update_login_sensitive(NULL, &d);
 
     gtk_window_set_resizable(GTK_WINDOW(d.dialog), FALSE);
     gtk_widget_show_all(d.dialog);
@@ -210,7 +234,7 @@ gboolean krbtray_kinit_dialog_run(KrbTrayApp *app, const gchar *principal_name)
 
     gtk_widget_destroy(d.dialog);
 
-    if (response == RESPONSE_MUST_CHANGE_PW) {
+    if (response == GTK_RESPONSE_OK && d.must_change) {
         gboolean ok = krbtray_passwd_dialog_run(app, actual_principal, TRUE);
         g_free(actual_principal);
         return ok;

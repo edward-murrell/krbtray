@@ -7,6 +7,7 @@
 #include <gtk/gtk.h>
 #include <glib/gi18n.h>
 #include <string.h>
+#include <time.h>
 
 /* ── Icon names per state ────────────────────────────────────────────────── */
 
@@ -262,7 +263,14 @@ static GtkWidget *build_menu(KrbTrayApp *app)
             gtk_menu_shell_append(GTK_MENU_SHELL(menu), make_default);
         }
         if (e->has_tickets) {
-            if (e->renewable) {
+            /* The KDC refuses to renew a ticket past its end time or its
+             * renewal limit, so only offer Renew Now while it can work.
+             * Authenticate… covers the expired case. */
+            time_t now = time(NULL);
+            gboolean can_renew = e->renewable &&
+                                 e->state != KRB_STATE_EXPIRED &&
+                                 (e->renew_till == 0 || now < e->renew_till);
+            if (can_renew) {
                 GtkWidget *renew =
                     principal_item(_("  Renew Now"), e->principal_name,
                                    G_CALLBACK(on_menu_renew), app);
